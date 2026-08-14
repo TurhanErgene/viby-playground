@@ -7,7 +7,9 @@
   --sea-deep: #0d3f61;
   --good: #45d69c;
   --shadow: 0 10px 30px rgba(4, 24, 40, .35);
-  --font: "Baloo 2", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  /* Deliberately all locally-available faces — no webfont to fail silently.
+     Trebuchet/Avenir carry the rounded, friendly weight this game wants. */
+  --font: "Trebuchet MS", "Avenir Next", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
