@@ -205,6 +205,52 @@ h2 { margin: 0 0 14px; font-size: 26px; }
 .hud-chip b { font-size: 16px; }
 .coinchip { display: flex; align-items: center; gap: 2px; color: var(--gold); }
 
+/* ---------- charge + aim ---------- */
+#aimUi {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom) + 26px);
+  z-index: 3;
+  pointer-events: none;
+  text-align: center;
+}
+#aimUi.hidden { display: none; }
+.aim-hint {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  color: #eaf6fb;
+  text-shadow: 0 2px 8px rgba(2, 14, 26, .9);
+  margin-bottom: 9px;
+}
+.wind-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #9fe3c4;
+  background: rgba(4, 28, 46, .5);
+  padding: 3px 12px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.power-track {
+  width: min(62vw, 280px);
+  height: 16px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: rgba(4, 28, 46, .55);
+  border: 1.5px solid rgba(255, 255, 255, .28);
+  overflow: hidden;
+}
+.power-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #45d69c, #ffc84a 62%, #ff7043);
+}
+
 .combo-tag {
   margin: 14px auto 0;
   width: fit-content;

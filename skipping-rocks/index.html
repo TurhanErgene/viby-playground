@@ -15,7 +15,7 @@
   <div class="overlay" id="titleScreen">
     <div class="panel">
       <h1 class="logo">SKIP<span>STONE</span></h1>
-      <p class="tag">Two taps to throw. One tap per bounce.</p>
+      <p class="tag">Hold to charge. Release to throw. Tap every bounce.</p>
       <button class="btn primary" id="playBtn">Play</button>
       <button class="btn ghost" id="howBtn">How to play</button>
       <div class="best-line">Best <b id="titleBest">0 m</b></div>
@@ -27,13 +27,18 @@
     <div class="panel">
       <h2>How to play</h2>
       <ol class="how">
-        <li><b>Tap 1</b> — stop the <i>power</i> bar. Higher is farther.</li>
-        <li><b>Tap 2</b> — stop the <i>angle</i> bar. Flat throws skip best.</li>
-        <li><b>Tap on impact</b> — hit the shrinking ring for a
+        <li><b>Hold</b> anywhere to charge. The power bar sweeps up and back —
+            let go when it reads where you want it.</li>
+        <li><b>Drag while holding</b> to aim: sideways to turn, up and down for
+            the angle. The dotted arc shows where the stone will land.</li>
+        <li><b>Release</b> to throw. The camera falls in behind the stone.</li>
+        <li><b>Tap</b> as it touches the water for a
             <span class="hl">Perfect</span> skip. Chain them for a combo.</li>
+        <li><b>Drag left and right</b> in flight to steer through the rings.</li>
       </ol>
-      <p class="hint">Grab coins over the water, watch the wind, and spend your
-      haul on upgrades between throws.</p>
+      <p class="hint">Flat throws skip furthest. Gold rings are worth 1, blue
+      gems 5 — but gems float high, so you have to give up a little flatness to
+      reach them. Spend the haul on upgrades between throws.</p>
       <button class="btn primary" id="howBackBtn">Got it</button>
     </div>
   </div>
@@ -70,11 +75,20 @@
       <div class="hud-chip"><small>DIST</small><b id="hudDist">0 m</b></div>
       <div class="hud-chip"><small>BEST</small><b id="hudBest">0 m</b></div>
       <div class="hud-chip"><small>SKIPS</small><b id="hudSkips">0</b></div>
-      <div class="hud-chip coinchip"><i class="coin"></i><b id="hudCoins">0</b></div>
+      <div class="hud-chip coinchip"><i class="coin"></i><b id="hudRings">0</b></div>
     </div>
     <div id="comboTag" class="combo-tag"></div>
   </div>
+
+  <!-- Charge + aim controls -->
+  <div id="aimUi" class="hidden">
+    <div class="wind-tag" id="windTag">WIND</div>
+    <div class="aim-hint" id="aimHint">Hold to charge · drag to aim</div>
+    <div class="power-track"><div class="power-fill" id="powerFill"></div></div>
+  </div>
 </div>
+<script src="engine.js"></script>
+<script src="scene.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
