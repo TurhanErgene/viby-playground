@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0b2b45" />
+<title>Skip Stone</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- Title screen -->
+  <div class="overlay" id="titleScreen">
+    <div class="panel">
+      <h1 class="logo">SKIP<span>STONE</span></h1>
+      <p class="tag">Two taps to throw. One tap per bounce.</p>
+      <button class="btn primary" id="playBtn">Play</button>
+      <button class="btn ghost" id="howBtn">How to play</button>
+      <div class="best-line">Best <b id="titleBest">0 m</b></div>
+    </div>
+  </div>
+
+  <!-- How to play -->
+  <div class="overlay hidden" id="howScreen">
+    <div class="panel">
+      <h2>How to play</h2>
+      <ol class="how">
+        <li><b>Tap 1</b> — stop the <i>power</i> bar. Higher is farther.</li>
+        <li><b>Tap 2</b> — stop the <i>angle</i> bar. Flat throws skip best.</li>
+        <li><b>Tap on impact</b> — hit the shrinking ring for a
+            <span class="hl">Perfect</span> skip. Chain them for a combo.</li>
+      </ol>
+      <p class="hint">Grab coins over the water, watch the wind, and spend your
+      haul on upgrades between throws.</p>
+      <button class="btn primary" id="howBackBtn">Got it</button>
+    </div>
+  </div>
+
+  <!-- Run summary -->
+  <div class="overlay hidden" id="resultScreen">
+    <div class="panel">
+      <h2 id="resultTitle">Nice throw</h2>
+      <div class="dist" id="resultDist">0 m</div>
+      <div class="stats">
+        <div><span id="resSkips">0</span><small>skips</small></div>
+        <div><span id="resPerfect">0</span><small>perfect</small></div>
+        <div><span id="resCombo">0</span><small>best combo</small></div>
+      </div>
+      <div class="payout"><i class="coin"></i> +<span id="resCoins">0</span></div>
+      <button class="btn primary" id="againBtn">Throw again</button>
+      <button class="btn ghost" id="shopBtn">Upgrades</button>
+    </div>
+  </div>
+
+  <!-- Shop -->
+  <div class="overlay hidden" id="shopScreen">
+    <div class="panel wide">
+      <h2>Upgrades</h2>
+      <div class="wallet"><i class="coin"></i><span id="shopCoins">0</span></div>
+      <div id="shopList" class="shop-list"></div>
+      <button class="btn primary" id="shopBackBtn">Back to the water</button>
+    </div>
+  </div>
+
+  <!-- In-run HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-row">
+      <div class="hud-chip"><small>DIST</small><b id="hudDist">0 m</b></div>
+      <div class="hud-chip"><small>BEST</small><b id="hudBest">0 m</b></div>
+      <div class="hud-chip"><small>SKIPS</small><b id="hudSkips">0</b></div>
+      <div class="hud-chip coinchip"><i class="coin"></i><b id="hudCoins">0</b></div>
+    </div>
+    <div id="comboTag" class="combo-tag"></div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
