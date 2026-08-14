@@ -27,6 +27,51 @@
     },
   ];
 
+  // Each throw picks the next light of day. Colours are grouped so every layer
+  // of the scene — sky, hills, water, foam, glitter — shifts together.
+  const PALETTES = [
+    { // clear morning
+      sky: ['#2f81b8', '#7cc5e3', '#e2f2f2'],
+      cloud: 'rgba(255,255,255,.88)', cloudShade: 'rgba(203,226,239,.9)',
+      sun: '255,247,205', sunGlow: '255,238,175', sunX: 0.78, sunY: 0.24,
+      surf: '#54b4d6', mid: '#1a7cad', deep: '#062b47',
+      hills: ['rgba(150,192,199,.5)', 'rgba(94,152,142,.75)', '#33705f'],
+      trees: '#2b6252', hillRef: 'rgba(52,104,96,.35)',
+      foam: '236,250,255', glitter: '255,246,206', dark: '#1c3444',
+      horizon: '208,236,240', pad: ['#3c7a5b', '#265f47'], reed: '#3c8a5e',
+    },
+    { // golden hour
+      sky: ['#2b5f96', '#e79f63', '#ffd9a8'],
+      cloud: 'rgba(255,226,196,.9)', cloudShade: 'rgba(212,148,128,.85)',
+      sun: '255,236,180', sunGlow: '255,190,120', sunX: 0.72, sunY: 0.5,
+      surf: '#6aa6bd', mid: '#256e91', deep: '#07243c',
+      hills: ['rgba(178,168,170,.5)', 'rgba(104,120,120,.72)', '#2c5a52'],
+      trees: '#23483f', hillRef: 'rgba(44,90,82,.35)',
+      foam: '255,242,224', glitter: '255,214,150', dark: '#1e3038',
+      horizon: '255,190,130', pad: ['#3f6d55', '#28503f'], reed: '#356b4e',
+    },
+    { // dusk
+      sky: ['#16255a', '#5d4a86', '#e0896b'],
+      cloud: 'rgba(198,172,202,.78)', cloudShade: 'rgba(118,94,138,.8)',
+      sun: '255,186,130', sunGlow: '236,140,110', sunX: 0.68, sunY: 0.6,
+      surf: '#43789c', mid: '#1a3f64', deep: '#050f22',
+      hills: ['rgba(122,122,162,.45)', 'rgba(64,72,104,.75)', '#232f4a'],
+      trees: '#1a2338', hillRef: 'rgba(35,47,74,.4)',
+      foam: '226,232,255', glitter: '255,196,150', dark: '#141c30',
+      horizon: '224,137,107', pad: ['#2c5560', '#1b3540'], reed: '#24455a',
+    },
+  ];
+
+  // Deterministic noise, so scattered detail stays put between frames.
+  const hash = (i) => { const v = Math.sin(i * 12.9898) * 43758.5453; return v - Math.floor(v); };
+
+  const CLOUDS = Array.from({ length: 9 }, (_, i) => ({
+    u: hash(i) * 2600,
+    y: 0.06 + hash(i + 40) * 0.34,
+    r: 26 + hash(i + 80) * 34,
+    par: 0.04 + hash(i + 120) * 0.05,
+  }));
+
   // Tuning derived from upgrade levels.
   const stats = (lv) => ({
     keepX: 0.900 + 0.0130 * lv.flat,   // forward speed kept per skip
@@ -92,10 +137,15 @@
 
   const trail = [];
   const ripples = [];
-  const bits = [];      // splash particles
+  const bits = [];      // splash droplets
   const pops = [];      // floating score text
+  const foams = [];     // lingering white water where the stone struck
   let coins = [];       // collectibles over the water
+  let pads = [];        // decorative lily pads
   let coinCursor = 0;   // world x up to which coins have been generated
+  let padCursors = [];
+  let squash = 0;       // stone deformation right after an impact
+  let pal = PALETTES[0];
 
   // ----------------------------------------------------------------- dom refs
   const el = (id) => document.getElementById(id);
@@ -144,7 +194,11 @@
     Object.assign(rock, { x: 0, y: 1.6, vx: 0, vy: 0, rot: 0, alive: false, sinkT: 0 });
     cam.x = -9.5; cam.y = 0;
     trail.length = 0; ripples.length = 0; bits.length = 0; pops.length = 0;
+    foams.length = 0;
     coins = []; coinCursor = 12;
+    pads = []; padCursors = [4, 4, 4, 4];
+    squash = 0;
+    pal = PALETTES[save.throws % PALETTES.length];
     wind = rand(-3.4, 3.4);
     armedPerfect = false; lastSkipAt = -9;
     meter = 0; meterDir = 1;
@@ -274,6 +328,7 @@
   function update(dt) {
     time += dt;
     shake *= Math.pow(0.0025, dt);
+    squash *= Math.pow(0.00002, dt);
 
     if (state === STATE.POWER || state === STATE.ANGLE) {
       const speed = state === STATE.POWER ? 1.45 : 1.85;
@@ -297,6 +352,7 @@
 
       collectCoins();
       spawnCoins();
+      spawnPads();
       run.dist = rock.x;
       updateHud();
     }
@@ -325,8 +381,18 @@
       b.vy -= G * 0.55 * dt;
       b.x += b.vx * dt; b.y += b.vy * dt;
       b.age += dt;
-      if (b.age > b.life || b.y < -0.4) bits.splice(i, 1);
+      if (b.y <= 0 && b.vy < 0) {
+        if (ripples.length < 44) addRipple(b.x, 0.06, 0.22);
+        bits.splice(i, 1);
+      } else if (b.age > b.life) {
+        bits.splice(i, 1);
+      }
     }
+    for (let i = foams.length - 1; i >= 0; i--) {
+      foams[i].age += dt;
+      if (foams[i].age > foams[i].life) foams.splice(i, 1);
+    }
+    for (const pd of pads) pd.wob *= Math.pow(0.02, dt);
     for (let i = pops.length - 1; i >= 0; i--) {
       pops[i].age += dt;
       pops[i].y += dt * 2.4;
@@ -356,6 +422,11 @@
 
     addRipple(rock.x, 0.55, 0.7 + quality * 0.5);
     splash(rock.x, perfect ? 14 : 6, perfect ? 1.2 : 0.6);
+    squash = 1;
+    foams.push({ x: rock.x, age: 0, life: perfect ? 1.5 : 1.0, r: perfect ? 1.5 : 0.9 });
+    for (const pd of pads) {
+      if (pd.d < 0.3 && Math.abs(pd.x - rock.x) < 4) pd.wob = Math.min(pd.wob + 1, 1.6);
+    }
 
     if (perfect) {
       // A skip never leaves the water faster than it arrived — the Perfect kick
@@ -392,6 +463,32 @@
       });
     }
     if (coins.length > 60) coins.splice(0, coins.length - 60);
+  }
+
+  const PAD_BANDS = [0.12, 0.34, 0.58, 0.82];
+
+  function spawnPads() {
+    for (let b = 0; b < PAD_BANDS.length; b++) {
+      const d = PAD_BANDS[b];
+      const m = 1 + d * 1.5;
+      const ahead = cam.x + (W / SCALE) / m + 12;   // world span this band covers
+      const gap = b === 0 ? rand(22, 52) : rand(11, 30);
+      while (padCursors[b] < ahead) {
+        padCursors[b] += gap / m;
+        pads.push({
+          x: padCursors[b],
+          d: d + rand(-0.05, 0.05),
+          r: rand(0.42, 0.85),
+          drift: rand(0, 6.28),
+          flower: Math.random() < 0.18,
+          wob: 0,
+        });
+      }
+    }
+    // drop pads that have scrolled off behind the camera
+    for (let i = pads.length - 1; i >= 0; i--) {
+      if ((pads[i].x - cam.x) * SCALE * (1 + pads[i].d * 1.5) < -90) pads.splice(i, 1);
+    }
   }
 
   function collectCoins() {
@@ -440,198 +537,462 @@
   }
 
   // ------------------------------------------------------------------ drawing
+
+  // Screen-space height of the water surface. The amplitude is deliberately
+  // tiny — the physics plane is flat at y = 0, and a big visible swell would
+  // disagree with where the stone actually lands.
+  function surfaceAt(px) {
+    const wx = cam.x + px / SCALE;
+    return waterY + cam.y
+      + Math.sin(wx * 0.55 + time * 1.6) * 2.0
+      + Math.sin(wx * 1.30 - time * 2.3) * 1.1
+      + Math.sin(wx * 0.21 + time * 0.7) * 1.6;
+  }
+
+  function tracedSurface(step) {
+    ctx.beginPath();
+    ctx.moveTo(-20, surfaceAt(-20));
+    for (let x = -20 + step; x <= W + 20; x += step) ctx.lineTo(x, surfaceAt(x));
+  }
+
   function draw() {
+    const p = pal;
     ctx.save();
     if (shake > 0.2) ctx.translate(rand(-shake, shake) * 0.4, rand(-shake, shake) * 0.4);
 
-    drawSky();
-    drawHills();
-    drawWater();
-    drawBuoys();
-    drawRipples();
-    drawShore();
+    drawSky(p);
+    drawHills(p);
+    drawWater(p);
+    drawFoam(p);
+    drawRipples(p);
+    drawPads(p);
+    drawBuoys(p);
+    drawShore(p);
     drawCoins();
-    drawTrail();
-    drawBits();
-    if (rock.alive || state === STATE.SINK) drawRock();
+    drawTrail(p);
+    drawBits(p);
+    if (rock.alive || state === STATE.SINK) drawRock(p);
     drawPops();
     drawMeters();
     drawTimingRing();
     drawWind();
+    drawVignette();
 
     ctx.restore();
   }
 
-  function drawSky() {
-    const g = ctx.createLinearGradient(0, 0, 0, waterY + cam.y);
-    g.addColorStop(0, '#2a7fb8');
-    g.addColorStop(0.55, '#7fc6e2');
-    g.addColorStop(1, '#dff0f2');
+  // ---------------------------------------------------------------------- sky
+  function drawSky(p) {
+    const horizon = waterY + cam.y;
+    const g = ctx.createLinearGradient(0, -30, 0, horizon);
+    g.addColorStop(0, p.sky[0]);
+    g.addColorStop(0.58, p.sky[1]);
+    g.addColorStop(1, p.sky[2]);
     ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, waterY + cam.y + 1);
+    ctx.fillRect(0, 0, W, horizon + 2);
 
-    // sun
-    const sunX = W * 0.78, sunY = (waterY + cam.y) * 0.28;
-    const gs = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, W * 0.3);
-    gs.addColorStop(0, 'rgba(255,246,200,.95)');
-    gs.addColorStop(0.12, 'rgba(255,236,170,.5)');
-    gs.addColorStop(1, 'rgba(255,236,170,0)');
-    ctx.fillStyle = gs;
-    ctx.fillRect(0, 0, W, waterY + cam.y);
+    const sunX = W * p.sunX, sunY = horizon * p.sunY;
+    const glow = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, W * 0.45);
+    glow.addColorStop(0, `rgba(${p.sunGlow},.6)`);
+    glow.addColorStop(0.3, `rgba(${p.sunGlow},.16)`);
+    glow.addColorStop(1, `rgba(${p.sunGlow},0)`);
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, horizon + 2);
 
-    // clouds (slow parallax)
-    ctx.fillStyle = 'rgba(255,255,255,.72)';
-    for (let i = 0; i < 5; i++) {
-      const cx = ((i * 620 - cam.x * SCALE * 0.06) % (W + 460)) - 230;
-      const cy = (waterY + cam.y) * (0.12 + 0.07 * ((i * 37) % 5) / 5) + 10;
-      cloud(cx, cy, 34 + (i % 3) * 12);
+    ctx.fillStyle = `rgba(${p.sun},.96)`;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, clamp(W * 0.036, 15, 32), 0, 6.2832);
+    ctx.fill();
+
+    for (const c of CLOUDS) {
+      const span = W + 900;
+      let x = (c.u - cam.x * SCALE * c.par) % span;
+      if (x < 0) x += span;
+      cloud(x - 450, horizon * c.y + 12, c.r, p);
     }
   }
 
-  function cloud(x, y, r) {
+  // Two-tone: a lit crown with a flatter shaded base, so clouds have a bottom.
+  function cloud(x, y, r, p) {
+    ctx.fillStyle = p.cloudShade;
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, 6.2832);
-    ctx.arc(x + r * 0.85, y + r * 0.12, r * 0.72, 0, 6.2832);
-    ctx.arc(x - r * 0.8, y + r * 0.18, r * 0.6, 0, 6.2832);
-    ctx.arc(x + r * 0.1, y - r * 0.45, r * 0.6, 0, 6.2832);
+    ctx.ellipse(x, y + r * 0.34, r * 1.5, r * 0.4, 0, 0, 6.2832);
+    ctx.fill();
+    ctx.fillStyle = p.cloud;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.78, 0, 6.2832);
+    ctx.arc(x + r * 0.82, y + r * 0.2, r * 0.58, 0, 6.2832);
+    ctx.arc(x - r * 0.8, y + r * 0.24, r * 0.5, 0, 6.2832);
+    ctx.arc(x + r * 0.16, y - r * 0.4, r * 0.52, 0, 6.2832);
     ctx.fill();
   }
 
-  function drawHills() {
+  // -------------------------------------------------------------------- hills
+  function drawHills(p) {
     const horizon = waterY + cam.y;
-    layerHills(horizon, 0.07, 'rgba(120,168,180,.55)', 78, 340);
-    layerHills(horizon, 0.16, 'rgba(74,132,126,.75)', 54, 250);
-    layerHills(horizon, 0.30, '#33705f', 34, 170);
+    ridge(horizon, 0.07, p.hills[0], 86, 380, false, p);
+    ridge(horizon, 0.16, p.hills[1], 58, 260, false, p);
+    ridge(horizon, 0.30, p.hills[2], 36, 175, true, p);
   }
 
-  function layerHills(horizon, par, color, amp, wl) {
+  function ridge(horizon, par, color, amp, wl, treed, p) {
     const off = -cam.x * SCALE * par;
+    const top = (x) => {
+      const u = (x - off) / wl;
+      return horizon - amp * (0.55 + 0.45 * Math.sin(u * 1.7) * Math.cos(u * 0.6 + 1.2));
+    };
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(-10, horizon + 2);
-    for (let x = -10; x <= W + 10; x += 12) {
-      const u = (x - off) / wl;
-      const y = horizon - amp * (0.55 + 0.45 * Math.sin(u * 1.7) * Math.cos(u * 0.6 + 1.2));
-      ctx.lineTo(x, y);
-    }
+    for (let x = -10; x <= W + 10; x += 12) ctx.lineTo(x, top(x));
     ctx.lineTo(W + 10, horizon + 2);
     ctx.closePath();
     ctx.fill();
+
+    if (!treed) return;
+    // A conifer line along the near ridge, thinning as it recedes.
+    ctx.fillStyle = p.trees;
+    for (let x = -10; x <= W + 10; x += 9) {
+      const n = Math.round(x / 9);
+      const jitter = (hash(n * 1.7) - 0.5) * 7;
+      const h = 6 + hash(n + 7) * 15;
+      const halfW = 2.8 + hash(n * 2.9) * 2.4;
+      const cx = x + jitter;
+      const y = top(cx) + 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, y - h);
+      ctx.lineTo(cx + halfW, y + 2);
+      ctx.lineTo(cx - halfW, y + 2);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
-  function drawWater() {
-    const top = waterY + cam.y;
-    const g = ctx.createLinearGradient(0, top, 0, H);
-    g.addColorStop(0, '#3ea3c9');
-    g.addColorStop(0.35, '#1d7fb0');
-    g.addColorStop(1, '#0a3357');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, top, W, H - top);
+  // -------------------------------------------------------------------- water
+  function drawWater(p) {
+    const base = waterY + cam.y;
 
-    // moving highlight bands — the sense of speed comes from these
-    const depth = H - top;
-    for (let i = 0; i < 26; i++) {
-      const f = i / 26;
-      const y = top + Math.pow(f, 1.7) * depth;
-      const par = 0.12 + f * 1.5;
-      const off = (-cam.x * SCALE * par + Math.sin(time * (0.6 + f) + i) * 18) % 220;
-      ctx.fillStyle = `rgba(255,255,255,${0.06 + f * 0.05})`;
-      for (let x = -220 + (off % 220); x < W + 220; x += 220) {
-        ctx.fillRect(x, y, 60 + f * 90, 1.5 + f * 2.5);
+    tracedSurface(9);
+    ctx.lineTo(W + 20, H + 10);
+    ctx.lineTo(-20, H + 10);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0, base, 0, H);
+    g.addColorStop(0, p.surf);
+    g.addColorStop(0.3, p.mid);
+    g.addColorStop(1, p.deep);
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    ctx.save();
+    ctx.clip();                       // keep every effect below inside the lake
+
+    // the far bank, smeared across the first few metres of water
+    ctx.fillStyle = p.hillRef;
+    ctx.fillRect(0, base - 3, W, 22);
+
+    // the sky's own colour carried into the water, so the horizon reads as one
+    // scene rather than two flat bands meeting at a line
+    const hz = ctx.createLinearGradient(0, base - 3, 0, base + 70);
+    hz.addColorStop(0, `rgba(${p.horizon},.5)`);
+    hz.addColorStop(0.45, `rgba(${p.horizon},.16)`);
+    hz.addColorStop(1, `rgba(${p.horizon},0)`);
+    ctx.fillStyle = hz;
+    ctx.fillRect(0, base - 3, W, 74);
+
+    // the sun's path on the water, widening as it comes toward the viewer
+    const sunX = W * p.sunX;
+    sunColumn(p, base, sunX);
+
+    drawSwell(p, base);
+    drawGlitter(p, base, sunX);
+    ctx.restore();
+
+    // lit crest along the surface itself
+    ctx.strokeStyle = `rgba(${p.foam},.5)`;
+    ctx.lineWidth = 1.8;
+    tracedSurface(9);
+    ctx.stroke();
+  }
+
+  // The sun's path on the water. Drawn as horizontal bands, each with its own
+  // left-to-right falloff, so the column feathers into the lake instead of
+  // ending on the hard diagonal a single filled trapezoid would give.
+  let sunBands = null, sunBandsKey = '';
+
+  function sunColumn(p, base, sunX) {
+    const depth = H - base;
+    const bands = 18;
+    const key = `${W}x${Math.round(depth)}|${p.glitter}`;
+    if (sunBandsKey !== key) {           // rebuild only on resize or palette swap
+      sunBands = [];
+      for (let i = 0; i < bands; i++) {
+        const f = i / bands;
+        const halfW = W * (0.045 + f * 0.28);
+        const a = (0.30 - f * 0.26) * (1 - f * 0.25);
+        const g = ctx.createLinearGradient(sunX - halfW, 0, sunX + halfW, 0);
+        g.addColorStop(0, `rgba(${p.glitter},0)`);
+        g.addColorStop(0.5, `rgba(${p.glitter},${a})`);
+        g.addColorStop(1, `rgba(${p.glitter},0)`);
+        sunBands.push({ g, halfW });
+      }
+      sunBandsKey = key;
+    }
+    for (let i = 0; i < bands; i++) {
+      const y = base + (i / bands) * depth, y2 = base + ((i + 1) / bands) * depth;
+      const { g, halfW } = sunBands[i];
+      ctx.fillStyle = g;
+      ctx.fillRect(sunX - halfW, y, halfW * 2, y2 - y + 1);
+    }
+  }
+
+  // Rows of swell receding to the horizon. Each row is a dashed sine, so it
+  // breaks into scattered crests instead of reading as a stripe.
+  function drawSwell(p, base) {
+    const depth = H - base;
+    const rows = W > 900 ? 20 : 26;
+    const step = clamp(W / 42, 12, 22);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < rows; i++) {
+      const f = (i + 0.5) / rows;
+      const y = base + Math.pow(f, 1.75) * depth;
+      const amp = 0.8 + f * f * 7;
+      const wl = 90 + f * 260;
+      const drift = -cam.x * SCALE * (0.15 + f * 1.6) + time * (10 + f * 46);
+
+      // an uneven dash rhythm — a single repeating pair reads as tick marks
+      const j = hash(i * 3.3), k = hash(i * 7.7);
+      const unit = 14 + f * 46;
+      ctx.setLineDash([
+        unit * (0.6 + j), 30 + f * 92,
+        unit * (0.3 + k * 0.7), 22 + f * 70 * (0.6 + j),
+      ]);
+      ctx.lineDashOffset = -drift * 0.6;
+      ctx.lineWidth = 1 + f * 2.4;
+
+      ctx.strokeStyle = `rgba(3,26,46,${0.06 + f * 0.08})`;
+      wave(y + 1.6 + f * 1.6, amp, wl, drift, step);
+      ctx.strokeStyle = `rgba(${p.foam},${0.10 + f * 0.13})`;
+      wave(y, amp, wl, drift, step);
+    }
+    ctx.setLineDash([]);
+  }
+
+  function wave(y, amp, wl, phase, step) {
+    ctx.beginPath();
+    for (let x = -40; x <= W + 40; x += step) {
+      const yy = y + Math.sin((x + phase) / wl * 6.2832) * amp;
+      if (x === -40) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
+  }
+
+  // Specular sparkle scattered down the sun's column.
+  function drawGlitter(p, base, sunX) {
+    const depth = H - base;
+    for (let i = 0; i < 54; i++) {
+      const h = hash(i * 3.7);
+      const f = ((i * 7) % 27) / 27;
+      const y = base + Math.pow(f, 1.7) * depth * 0.8 + Math.sin(time * 0.8 + i) * 2;
+      const x = sunX + (h * 2 - 1) * W * (0.05 + f * 0.26);
+      const twinkle = 0.4 + 0.6 * Math.abs(Math.sin(time * (1.4 + h * 1.6) + i * 2.1));
+      ctx.globalAlpha = twinkle * (1 - f * 0.55) * 0.7;
+      ctx.fillStyle = `rgba(${p.glitter},1)`;
+      ctx.fillRect(x, y, 6 + f * 26, 1.1 + f * 1.8);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawVignette() {
+    const v = ctx.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * 0.32,
+                                       W / 2, H * 0.5, Math.max(W, H) * 0.78);
+    v.addColorStop(0, 'rgba(0,0,0,0)');
+    v.addColorStop(1, 'rgba(2,14,26,.34)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ------------------------------------------------------------ water surface
+  function drawFoam(p) {
+    for (const f of foams) {
+      const t = f.age / f.life;
+      const x = sx(f.x);
+      if (x < -60 || x > W + 60) continue;
+      const r = f.r * SCALE * (1 + t * 1.6);
+      ctx.fillStyle = `rgba(${p.foam},${(1 - t) * 0.32})`;
+      ctx.beginPath();
+      ctx.ellipse(x, surfaceAt(x), r, r * 0.3, 0, 0, 6.2832);
+      ctx.fill();
+    }
+  }
+
+  function drawRipples(p) {
+    for (const r of ripples) {
+      const t = r.age / r.life;
+      const x = sx(r.x);
+      if (x < -80 || x > W + 80) continue;
+      const y = surfaceAt(x);
+      const rad = (r.r + t * 7 * r.strength) * SCALE;
+      ctx.lineWidth = 0.6 + 2.2 * (1 - t);
+      ctx.strokeStyle = `rgba(${p.foam},${(1 - t) * 0.6 * r.strength})`;
+      ctx.beginPath();
+      ctx.ellipse(x, y, rad, rad * 0.27, 0, 0, 6.2832);
+      ctx.stroke();
+      if (t < 0.55) {
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = `rgba(${p.foam},${(0.55 - t) * 0.7 * r.strength})`;
+        ctx.beginPath();
+        ctx.ellipse(x, y, rad * 0.52, rad * 0.14, 0, 0, 6.2832);
+        ctx.stroke();
       }
     }
-
-    // sun glitter near the surface
-    ctx.fillStyle = 'rgba(255,240,190,.20)';
-    for (let i = 0; i < 40; i++) {
-      const s = Math.sin(i * 12.9898) * 43758.5453;
-      const fx = ((s - Math.floor(s)) * W * 1.4 - cam.x * SCALE * 0.3) % W;
-      const x = fx < 0 ? fx + W : fx;
-      const y = top + 4 + ((i * 7) % 60) * (Math.abs(Math.sin(time * 0.7 + i)) * 0.9 + 0.3);
-      ctx.fillRect(x, y, 10 + (i % 4) * 6, 1.4);
-    }
-
-    ctx.fillStyle = 'rgba(255,255,255,.35)';
-    ctx.fillRect(0, top - 1, W, 1.6);
   }
 
-  function drawShore() {
-    // dock + thrower, drawn in world units so they stay life-sized at any zoom
-    if (sx(1) < -80) return;
-    const u = SCALE, deck = sy(1.1), px = sx(-1.2);
+  // Lily pads sit at varying depths and scroll at their own rate — the strongest
+  // cue that the water is a receding plane rather than a flat backdrop.
+  function drawPads(p) {
+    for (const pd of pads) {
+      const d = pd.d;
+      const m = 1 + d * 1.5;
+      const x = (pd.x - cam.x) * SCALE * m;
+      if (x < -70 || x > W + 70) continue;
+      const y = surfaceAt(x) + Math.pow(d, 1.6) * (H - waterY - cam.y) * 0.62
+              + Math.sin(time * 1.5 + pd.drift) * (1 + pd.wob * 4);
+      const r = SCALE * pd.r * m;
+
+      ctx.fillStyle = 'rgba(3,26,46,.22)';
+      ctx.beginPath();
+      ctx.ellipse(x + r * 0.1, y + r * 0.2, r, r * 0.34, 0, 0, 6.2832);
+      ctx.fill();
+
+      ctx.fillStyle = d > 0.55 ? p.pad[1] : p.pad[0];
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * 0.36, 0, 0.42, 6.2832 - 0.42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.12)';
+      ctx.beginPath();
+      ctx.ellipse(x - r * 0.25, y - r * 0.1, r * 0.4, r * 0.13, 0, 0, 6.2832);
+      ctx.fill();
+
+      if (pd.flower) {
+        ctx.fillStyle = 'rgba(255,224,238,.95)';
+        for (let k = 0; k < 5; k++) {
+          const a = k * 1.256 + 0.3;
+          ctx.beginPath();
+          ctx.ellipse(x + Math.cos(a) * r * 0.22, y - r * 0.12 + Math.sin(a) * r * 0.08,
+                      r * 0.19, r * 0.09, a, 0, 6.2832);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#ffd451';
+        ctx.beginPath();
+        ctx.arc(x, y - r * 0.12, r * 0.09, 0, 6.2832);
+        ctx.fill();
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ markers
+  function drawBuoys(p) {
+    const from = Math.floor(cam.x / BUOY_SPACING) * BUOY_SPACING;
+    const to = cam.x + W / SCALE + BUOY_SPACING;
+    ctx.textAlign = 'center';
+    for (let m = Math.max(BUOY_SPACING, from); m <= to; m += BUOY_SPACING) {
+      const x = sx(m);
+      const y = surfaceAt(x) + Math.sin(time * 1.6 + m) * 2;
+      const hundred = m % 100 === 0;
+
+      ctx.fillStyle = 'rgba(3,26,46,.25)';
+      ctx.beginPath();
+      ctx.ellipse(x, y + 2, 9, 3, 0, 0, 6.2832);
+      ctx.fill();
+
+      ctx.fillStyle = hundred ? '#ff7043' : '#f2f7f9';
+      ctx.beginPath();
+      ctx.moveTo(x, y - 15); ctx.lineTo(x + 5.5, y); ctx.lineTo(x - 5.5, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,.18)';
+      ctx.beginPath();
+      ctx.moveTo(x, y - 15); ctx.lineTo(x + 5.5, y); ctx.lineTo(x, y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(${p.foam},.6)`;
+      ctx.font = '700 11px system-ui, sans-serif';
+      ctx.fillText(`${m}`, x, y + 15);
+    }
+
+    if (save.best > 5) {
+      const x = sx(save.best);
+      if (x > -40 && x < W + 40) {
+        const y = surfaceAt(x);
+        ctx.strokeStyle = 'rgba(255,200,74,.9)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x, y - 36); ctx.lineTo(x, y); ctx.stroke();
+        ctx.fillStyle = '#ffc84a';
+        ctx.beginPath();
+        ctx.moveTo(x, y - 36); ctx.lineTo(x + 21, y - 30); ctx.lineTo(x, y - 24);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(255,200,74,.85)';
+        ctx.font = '700 10px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('BEST', x + 4, y - 10);
+        ctx.textAlign = 'center';
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------- shore
+  function drawShore(p) {
+    if (sx(1) < -110) return;
+    const u = SCALE, px = sx(-1.2);
+    const deck = sy(1.1);
+
+    // reeds in the shallows, in front of and behind the pier
+    for (let i = 0; i < 26; i++) {
+      const wx = -15 + hash(i * 2.3) * 13;
+      const x = sx(wx);
+      if (x < -30 || x > W + 30) continue;
+      const base = surfaceAt(x) + hash(i * 9.1) * 10;
+      const h = (12 + hash(i * 4.7) * 26) * (u / 13);
+      const sway = Math.sin(time * 1.4 + i) * 3;
+      ctx.strokeStyle = i % 3 === 0 ? p.trees : p.reed;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, base);
+      ctx.quadraticCurveTo(x + sway * 0.5, base - h * 0.6, x + sway, base - h);
+      ctx.stroke();
+    }
 
     ctx.fillStyle = '#5a3b25';
     ctx.fillRect(sx(-9), deck, u * 8.2, u * 0.32);
+    ctx.fillStyle = 'rgba(255,255,255,.10)';
+    ctx.fillRect(sx(-9), deck, u * 8.2, u * 0.1);
     ctx.fillStyle = '#3e2717';
     for (let i = 0; i < 4; i++) {
-      ctx.fillRect(sx(-8.4 + i * 2.1), deck + u * 0.3, u * 0.24, u * 1.15);
+      const postX = sx(-8.4 + i * 2.1);
+      ctx.fillRect(postX, deck + u * 0.3, u * 0.24, surfaceAt(postX) - deck - u * 0.3 + u * 0.5);
     }
 
-    // silhouette of the thrower
     const aiming = state === STATE.POWER || state === STATE.ANGLE;
     const bob = aiming ? Math.sin(time * 5) * u * 0.05 : 0;
     const feet = deck + bob;
-    ctx.fillStyle = '#1c3444';
+    ctx.fillStyle = p.dark;
     ctx.beginPath();
-    ctx.arc(px, feet - u * 1.62, u * 0.23, 0, 6.2832);              // head
+    ctx.arc(px, feet - u * 1.62, u * 0.23, 0, 6.2832);
     ctx.fill();
-    ctx.fillRect(px - u * 0.2, feet - u * 1.4, u * 0.4, u * 0.72);  // torso
-    ctx.fillRect(px - u * 0.18, feet - u * 0.7, u * 0.14, u * 0.7); // legs
+    ctx.fillRect(px - u * 0.2, feet - u * 1.4, u * 0.4, u * 0.72);
+    ctx.fillRect(px - u * 0.18, feet - u * 0.7, u * 0.14, u * 0.7);
     ctx.fillRect(px + u * 0.04, feet - u * 0.7, u * 0.14, u * 0.7);
-    ctx.save();                                                     // throwing arm
+    ctx.save();
     ctx.translate(px + u * 0.14, feet - u * 1.28);
     ctx.rotate(state === STATE.ANGLE ? -0.95 : -0.25);
     ctx.fillRect(0, -u * 0.07, u * 0.6, u * 0.14);
     ctx.restore();
   }
 
-  function drawBuoys() {
-    const from = Math.floor(cam.x / BUOY_SPACING) * BUOY_SPACING;
-    const to = cam.x + W / SCALE + BUOY_SPACING;
-    for (let m = Math.max(BUOY_SPACING, from); m <= to; m += BUOY_SPACING) {
-      const x = sx(m), y = sy(0) + Math.sin(time * 1.6 + m) * 2;
-      ctx.fillStyle = m % 100 === 0 ? '#ff7043' : 'rgba(255,255,255,.55)';
-      ctx.beginPath();
-      ctx.moveTo(x, y - 13); ctx.lineTo(x + 5, y); ctx.lineTo(x - 5, y);
-      ctx.closePath(); ctx.fill();
-      ctx.fillStyle = 'rgba(6,37,60,.35)';
-      ctx.font = '600 11px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${m}`, x, y + 14);
-    }
-
-    // personal best marker
-    if (save.best > 5) {
-      const x = sx(save.best);
-      if (x > -30 && x < W + 30) {
-        const y = sy(0);
-        ctx.strokeStyle = 'rgba(255,200,74,.9)';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(x, y - 34); ctx.lineTo(x, y); ctx.stroke();
-        ctx.fillStyle = '#ffc84a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - 34); ctx.lineTo(x + 20, y - 28); ctx.lineTo(x, y - 22);
-        ctx.closePath(); ctx.fill();
-        ctx.fillStyle = 'rgba(6,37,60,.6)';
-        ctx.font = '700 10px system-ui, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText('BEST', x + 3, y - 8);
-      }
-    }
-  }
-
-  function drawRipples() {
-    ctx.lineWidth = 2;
-    for (const r of ripples) {
-      const t = r.age / r.life;
-      const rad = (r.r + t * 6 * r.strength) * SCALE;
-      ctx.strokeStyle = `rgba(255,255,255,${(1 - t) * 0.55 * r.strength})`;
-      ctx.beginPath();
-      ctx.ellipse(sx(r.x), sy(0), rad, rad * 0.28, 0, 0, 6.2832);
-      ctx.stroke();
-    }
-  }
-
+  // -------------------------------------------------------------------- coins
   function drawCoins() {
     for (const c of coins) {
       if (c.got) continue;
@@ -642,7 +1003,7 @@
       const w = Math.abs(Math.cos(time * 3 + c.bob)) * rad + rad * 0.28;
       ctx.save();
       ctx.translate(x, y);
-      const g = ctx.createLinearGradient(-w, -10, w, 10);
+      const g = ctx.createLinearGradient(-w, -rad, w, rad);
       if (c.gem) { g.addColorStop(0, '#bff4ff'); g.addColorStop(1, '#2ea6d6'); }
       else { g.addColorStop(0, '#fff0b8'); g.addColorStop(1, '#e39a12'); }
       ctx.fillStyle = g;
@@ -657,7 +1018,7 @@
       ctx.strokeStyle = c.gem ? 'rgba(255,255,255,.85)' : 'rgba(180,110,10,.85)';
       ctx.lineWidth = 2;
       ctx.stroke();
-      if (!c.gem && w > rad * 0.45) {          // inner ring, only when face-on
+      if (!c.gem && w > rad * 0.45) {
         ctx.strokeStyle = 'rgba(180,110,10,.5)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
@@ -672,14 +1033,15 @@
     }
   }
 
-  function drawTrail() {
+  // ------------------------------------------------------------- stone & wake
+  function drawTrail(p) {
     if (trail.length < 2) return;
     ctx.lineCap = 'round';
     for (let i = 1; i < trail.length; i++) {
       const a = trail[i - 1], b = trail[i];
       const f = i / trail.length;
-      ctx.strokeStyle = `rgba(255,255,255,${f * 0.35})`;
-      ctx.lineWidth = f * 4;
+      ctx.strokeStyle = `rgba(${p.foam},${f * 0.32})`;
+      ctx.lineWidth = f * 3.5;
       ctx.beginPath();
       ctx.moveTo(sx(a.x), sy(a.y));
       ctx.lineTo(sx(b.x), sy(b.y));
@@ -687,50 +1049,78 @@
     }
   }
 
-  function drawRock() {
+  function drawBits(p) {
+    for (const b of bits) {
+      const t = b.age / b.life;
+      const x = sx(b.x), y = sy(b.y);
+      const sp = Math.hypot(b.vx, b.vy);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.atan2(-b.vy, b.vx));
+      ctx.fillStyle = `rgba(${p.foam},${(1 - t) * 0.92})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, b.r * (1 - t * 0.35) * (1 + sp * 0.06), b.r * (1 - t * 0.35), 0, 0, 6.2832);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawRock(p) {
     const x = sx(rock.x);
     let y = sy(rock.y);
-    let alpha = 1, scale = 1;
+    let alpha = 1, shrink = 1;
     if (state === STATE.SINK) {
       const t = clamp(rock.sinkT / 0.95, 0, 1);
       y += t * 34;
       alpha = 1 - t;
-      scale = 1 - t * 0.4;
+      shrink = 1 - t * 0.4;
     }
-    // shadow on the water
     const h = clamp(rock.y, 0, 12);
+    const rr = clamp(SCALE * 0.62, 8, 16);
+    const flat = 1 + save.lv.flat * 0.06;
+
+    // cast shadow
     const sw = clamp(SCALE * 0.55, 7, 14) * (1 - h / 18);
     ctx.fillStyle = `rgba(4,40,66,${0.2 * (1 - h / 16) * alpha})`;
     ctx.beginPath();
-    ctx.ellipse(x, sy(0) + 2, sw * scale, sw * 0.32 * scale, 0, 0, 6.2832);
+    ctx.ellipse(x, surfaceAt(x) + 2, sw * shrink, sw * 0.32 * shrink, 0, 0, 6.2832);
     ctx.fill();
+
+    // mirrored in the surface, fading out as the stone climbs
+    if (h < 5 && state !== STATE.SINK) {
+      const surf = surfaceAt(x);
+      ctx.save();
+      ctx.globalAlpha = (1 - h / 5) * 0.3;
+      ctx.translate(x + Math.sin(time * 3) * 1.5, surf + (surf - y));
+      ctx.rotate(-rock.rot);
+      ctx.fillStyle = '#3f4a52';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rr * flat, rr * 0.4, 0, 0, 6.2832);
+      ctx.fill();
+      ctx.restore();
+    }
 
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(x, y);
     ctx.rotate(rock.rot);
-    ctx.scale(scale, scale);
-    const flat = 1 + save.lv.flat * 0.06;
-    const rr = clamp(SCALE * 0.62, 8, 16);
-    ctx.fillStyle = '#4f5a61';
+    ctx.scale(shrink * (1 + squash * 0.3), shrink * (1 - squash * 0.28));
+    const g = ctx.createLinearGradient(0, -rr * 0.6, 0, rr * 0.6);
+    g.addColorStop(0, '#8d99a1');
+    g.addColorStop(0.55, '#5b666e');
+    g.addColorStop(1, '#3c464d');
+    ctx.fillStyle = g;
     ctx.beginPath();
     ctx.ellipse(0, 0, rr * flat, rr * 0.56, 0, 0, 6.2832);
     ctx.fill();
-    ctx.fillStyle = '#7d8a92';
+    ctx.strokeStyle = 'rgba(20,28,34,.5)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.3)';
     ctx.beginPath();
-    ctx.ellipse(-rr * 0.16, -rr * 0.16, rr * 0.62 * flat, rr * 0.3, 0, 0, 6.2832);
+    ctx.ellipse(-rr * 0.2, -rr * 0.18, rr * 0.46 * flat, rr * 0.17, -0.15, 0, 6.2832);
     ctx.fill();
     ctx.restore();
-  }
-
-  function drawBits() {
-    for (const b of bits) {
-      const t = b.age / b.life;
-      ctx.fillStyle = `rgba(235,250,255,${(1 - t) * 0.9})`;
-      ctx.beginPath();
-      ctx.arc(sx(b.x), sy(b.y), b.r * (1 - t * 0.4), 0, 6.2832);
-      ctx.fill();
-    }
   }
 
   function drawPops() {
@@ -744,6 +1134,7 @@
     }
   }
 
+  // ----------------------------------------------------------------------- ui
   function drawMeters() {
     if (state !== STATE.POWER && state !== STATE.ANGLE) return;
     const isPower = state === STATE.POWER;
@@ -759,12 +1150,11 @@
     ctx.textAlign = 'center';
     ctx.fillText(isPower ? 'POWER — tap to set' : 'ANGLE — flat skips best', W / 2, by - 12);
 
-    // track
     const g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
     if (isPower) { g.addColorStop(0, '#3a6f8c'); g.addColorStop(1, '#ffc84a'); }
     else {
       g.addColorStop(0, '#3a6f8c');
-      g.addColorStop(0.32, '#45d69c');   // sweet spot for the skip angle
+      g.addColorStop(0.32, '#45d69c');
       g.addColorStop(0.55, '#3a6f8c');
       g.addColorStop(1, '#c0553f');
     }
@@ -781,7 +1171,6 @@
       ctx.setLineDash([]);
     }
 
-    // marker
     const mx = bx + meter * bw;
     ctx.fillStyle = '#fff';
     roundRect(mx - 3.5, by - 7, 7, bh + 14, 4);
@@ -814,7 +1203,6 @@
     ctx.arc(x, y, target + f * target * 2.6, 0, 6.2832);
     ctx.stroke();
 
-    // fixed target ring — land the shrinking ring on this
     ctx.lineWidth = 2;
     ctx.strokeStyle = 'rgba(255,255,255,.5)';
     ctx.beginPath();
@@ -842,8 +1230,6 @@
     ctx.strokeStyle = wind >= 0 ? '#45d69c' : '#ff9678';
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-    // Chevrons sit in fixed slots so the pill stays balanced whichever way
-    // the wind is blowing.
     for (let i = 0; i < 3; i++) {
       ctx.globalAlpha = strength > i * 0.33 ? 1 : 0.2;
       const mid = cx + 12 + i * 13;

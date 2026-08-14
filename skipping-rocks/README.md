@@ -56,6 +56,34 @@ Three, five levels each, bought between throws with coins:
 Fully upgraded with clean timing, throws run past 250 m. Costs scale 1.75× per
 level, so a full board is a few dozen throws away.
 
+## Look and feel
+
+The lake is the whole screen, so most of the rendering budget goes into it:
+
+- **Wavy surface.** The waterline is a summed-sine curve rather than a straight
+  edge, and everything that touches the water — ripples, foam, buoys, lily pads,
+  the stone's shadow and reflection — is placed against that curve, so nothing
+  floats off the surface.
+- **Depth.** Twenty-six rows of swell recede toward the horizon, each a dashed
+  sine with its own amplitude, wavelength, parallax rate and dash rhythm. Lily
+  pads are generated in four depth bands, each paced to its own parallax rate,
+  and the near ones sweep past far faster than the far ones. That parallax is
+  the main cue that the water is a receding plane and not a flat backdrop.
+- **The sun on the water.** A feathered column of horizontal bands (not a single
+  filled trapezoid, which ends on a hard diagonal) with specular sparkle
+  scattered down it.
+- **Three times of day** — clear morning, golden hour, dusk — cycling per throw.
+  Every layer shifts together: sky, clouds, hills, tree line, water, foam,
+  glitter, lily pads and reeds all come from one palette, and the sky's colour
+  is carried down into the first few metres of water so the horizon reads as one
+  scene instead of two bands meeting at a line.
+- **Impacts.** Each skip leaves a two-tone ripple ring, a patch of white water,
+  and droplets that arc away and cut their own small rings where they land. The
+  stone squashes on contact and rocks the nearby lily pads.
+
+It holds 60 fps on both phone and desktop viewports; the sun-column gradients
+are cached, and the swell samples coarser on wide screens.
+
 ## Notes on the implementation
 
 - `game.js` is a single IIFE: physics in metres and seconds, rendering in a
