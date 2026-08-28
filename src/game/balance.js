@@ -8,9 +8,9 @@
  *
  * The three budgets, expressed as lap-time swing on a reference lap:
  *
- *   STAT budget   21%  a maxed car vs. a stock car, averaged over random maps
- *   LUCK budget   10%  the swing a map roll puts on a build you already bought
- *   SKILL budget  34%  clean lines + drift-boost chaining + nitro fusion
+ *   STAT budget   20%  a maxed car vs. a stock car, averaged over random maps
+ *   LUCK budget    9%  the swing a map roll puts on a build you already bought
+ *   SKILL budget  31%  clean lines + drift-boost chaining + nitro fusion
  *
  * The ordering is the design: SKILL > STAT > LUCK. The worst possible roll in
  * the wrong car is recoverable by driving well, and no amount of money buys
@@ -22,9 +22,9 @@
  */
 
 export const BUDGET = Object.freeze({
-  stat: 0.21,
-  luck: 0.10,
-  skill: 0.34
+  stat: 0.20,
+  luck: 0.09,
+  skill: 0.31
 });
 
 /** Upgrade tracks. Level 0..5. `curve(l)` returns a 0..1 normalised value. */
@@ -97,7 +97,7 @@ export function resolveStats(levels) {
     slipRecovery: lerp(0.55, 1.15, lv.grip),         // how fast a slide is caught
 
     // --- Terrain-specific leverage: wide. This is what a map roll gambles on. ---
-    tractionFloor: lerp(0.66, 1.36, lv.grip),        // multiplies low-mu surfaces
+    tractionFloor: lerp(0.70, 1.32, lv.grip),        // multiplies low-mu surfaces
     absorption: lerp(0.10, 0.95, lv.suspension),     // broken-ground retention
     landing: lerp(0.22, 0.95, lv.suspension),        // hard-landing retention
     rideHeight: lerp(0.30, 0.62, lv.suspension),

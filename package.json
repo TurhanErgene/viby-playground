@@ -9,7 +9,9 @@
     "build": "vite build",
     "preview": "vite preview --port 4173",
     "smoke": "node scripts/smoke.mjs",
-    "balance": "node scripts/balance-report.mjs"
+    "balance": "node scripts/balance-report.mjs",
+    "sim": "node scripts/sim-check.mjs",
+    "boost": "node scripts/boost-value.mjs"
   },
   "devDependencies": {
     "vite": "^5.4.10"
