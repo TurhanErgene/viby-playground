@@ -86,6 +86,7 @@ const offShare = driven.off / Math.max(0.1, driven.raceTime);
 if (offShare > 0.25) fail(`reference driver spent ${(offShare * 100).toFixed(0)}% of the lap off track`);
 else ok(`stays on the racing surface (${(offShare * 100).toFixed(0)}% off track)`);
 
+if (shots) await page.screenshot({ path: 'docs/shot-race.png' });
 await page.evaluate(() => { globalThis.__apex.game.autoDrive = false; });
 
 // Turn and yank the handbrake to exercise the drift system. Throttle stays on:
@@ -111,7 +112,6 @@ else ok(`drift charge builds while sliding (peak ${peak.toFixed(0)}%)`);
 const lap = await page.locator('#hud-lap').textContent();
 const pos = await page.locator('#hud-pos').textContent();
 ok(`HUD live (${pos?.trim()}, ${lap?.trim()})`);
-if (shots) await page.screenshot({ path: 'docs/shot-race.png' });
 
 if (errors.length) {
   fail('console errors:\n    ' + errors.slice(0, 8).join('\n    '));

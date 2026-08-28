@@ -12,7 +12,7 @@ export function buildTrackMesh(track) {
   const SHOULDER = 6.5;
 
   const positions = [], colors = [], indices = [];
-  const shoulderCol = new THREE.Color(0x3d3a32);
+  const shoulderCol = new THREE.Color(0x6b5a3f);
   const tmp = new THREE.Color();
 
   for (let i = 0; i < n; i++) {
@@ -66,8 +66,34 @@ export function buildTrackMesh(track) {
   group.add(road);
 
   group.add(buildKerbs(track));
+  group.add(buildEdgeLines(track));
   group.add(buildStartLine(track));
   return group;
+}
+
+/**
+ * A white line down each edge of the racing surface. Kerbs only appear at
+ * corners, so without this there is nothing on a straight telling the player
+ * where the grip stops and the run-off starts.
+ */
+function buildEdgeLines(track) {
+  const s = track.samples, n = s.length;
+  const g = new THREE.Group();
+  const mat = new THREE.LineBasicMaterial({ color: 0xf4f6f8, transparent: true, opacity: 0.85 });
+  for (const side of [-1, 1]) {
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const c = s[i % n];
+      const off = side * (c.width * 0.5 - 0.35);
+      pts.push(new THREE.Vector3(
+        c.x + c.nx * off,
+        c.y + Math.sin(c.bank) * off + 0.09,
+        c.z + c.nz * off
+      ));
+    }
+    g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+  }
+  return g;
 }
 
 /**

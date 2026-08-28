@@ -175,15 +175,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-/** Put a beached car back on the road facing the right way, with no speed. */
-function recover(car) {
-  const s = car.track.samples[car.index];
-  car.x = s.x; car.z = s.z; car.y = s.y;
-  car.yaw = Math.atan2(s.tz, s.tx);
-  car.vf = Math.min(car.vf, 8); car.vl = 0; car.vy = 0;
-  car.airborne = false;
-  car.driftCharge = 0;
-}
+/** Manual recovery. The car also rejoins on its own if it is truly stranded. */
+function recover(car) { car.rejoin(); }
 
 // Exposed for the browser smoke test to inspect scene state.
 globalThis.__apex = { game, scene, input };

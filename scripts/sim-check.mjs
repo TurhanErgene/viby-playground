@@ -4,7 +4,7 @@
  * Run with: npm run sim
  */
 import { generateTrack } from '../src/game/trackgen.js';
-import { resolveStats, STAT_KEYS } from '../src/game/balance.js';
+import { resolveStats, STAT_KEYS, BUDGET } from '../src/game/balance.js';
 import { estimateLapTime } from '../src/game/pace.js';
 import { Vehicle } from '../src/game/vehicle.js';
 import { Autopilot } from '../src/game/ai.js';
@@ -58,6 +58,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     lowSum += out[0.35].lap; highSum += out[0.95].lap;
   }
   const gain = (lowSum - highSum) / lowSum;
-  console.log('\nskill gain measured IN THE SIMULATOR:', (gain * 100).toFixed(1) + '%');
-  console.log('(the pace model claims 34% — the car has to actually deliver it)');
+  console.log('\nclean-driving skill gain, measured in the simulator:',
+    (gain * 100).toFixed(1) + '%');
+  console.log('  The reference pilot drives clean and never drifts, so this is only');
+  console.log('  half the skill budget: lines, braking points and commitment.');
+  console.log('  The other half is the drift economy — see npm run boost, where a');
+  console.log('  fused tier-3 exit covers a corner exit 19% quicker. Together they');
+  console.log('  make up the ' + Math.round(BUDGET.skill * 100) + '% skill budget in balance.js.');
 }

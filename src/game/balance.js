@@ -8,8 +8,8 @@
  *
  * The three budgets, expressed as lap-time swing on a reference lap:
  *
- *   STAT budget   20%  a maxed car vs. a stock car, averaged over random maps
- *   LUCK budget    9%  the swing a map roll puts on a build you already bought
+ *   STAT budget   21%  a maxed car vs. a stock car, averaged over random maps
+ *   LUCK budget    7%  the swing a map roll puts on a build you already bought
  *   SKILL budget  31%  clean lines + drift-boost chaining + nitro fusion
  *
  * The ordering is the design: SKILL > STAT > LUCK. The worst possible roll in
@@ -22,8 +22,8 @@
  */
 
 export const BUDGET = Object.freeze({
-  stat: 0.20,
-  luck: 0.09,
+  stat: 0.21,
+  luck: 0.07,
   skill: 0.31
 });
 
@@ -147,14 +147,19 @@ export const SKILL = Object.freeze({
 });
 
 /** Payouts. A bad car driven well must still earn — that is the whole point. */
+/**
+ * Payouts are deliberately tight: a strong season should end around two thirds
+ * of a maxed car, never all of it. If you can afford everything by round six
+ * the upgrade gamble stops being a decision, which is the point of the game.
+ */
 export const PAYOUT = Object.freeze({
-  position: [12000, 8600, 6400, 4800, 3600, 2800, 2200, 1800],
-  finishFloor: 1400,
-  perDriftSecond: 95,
-  perCleanLanding: 320,
-  bestLapBonus: 2200,
-  flawlessLap: 1500,          // a lap with no wall contact and no off-track
-  underdogPerRankBeaten: 850  // beating a rival whose car is worth more than yours
+  position: [6000, 4600, 3600, 2800, 2100, 1600, 1300, 1000],
+  finishFloor: 900,
+  perDriftSecond: 45,
+  perCleanLanding: 180,
+  bestLapBonus: 1200,
+  flawlessLap: 500,           // a lap with no wall contact and no off-track
+  underdogPerRankBeaten: 450  // beating a rival whose car is worth more than yours
 });
 
 export const RACE = Object.freeze({

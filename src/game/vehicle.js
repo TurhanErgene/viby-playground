@@ -269,8 +269,33 @@ export class Vehicle {
       }
     }
 
+    // A car stranded in the run-off with no way back would end a season on a
+    // technicality. Give it a marshal after a few seconds, at a cost in time.
+    if (raceTime > 0 && onShoulder && this.speed < 3.5) {
+      this.stuckTimer = (this.stuckTimer ?? 0) + dt;
+      if (this.stuckTimer > 3.5) { this.rejoin(); this.onEvent?.('rejoin'); }
+    } else {
+      this.stuckTimer = 0;
+    }
+
     this.telemetry.topSpeed = Math.max(this.telemetry.topSpeed, this.speed);
     return this;
+  }
+
+  /** Put the car back on the racing line, pointing the right way, slowly. */
+  rejoin() {
+    const s = this.track.samples[this.index];
+    this.x = s.x; this.z = s.z; this.y = s.y;
+    this.yaw = Math.atan2(s.tz, s.tx);
+    this.vf = Math.min(Math.max(this.vf, 0), 8);
+    this.vl = 0; this.vy = 0;
+    this.yawRate = 0;
+    this.airborne = false;
+    this.pitch = 0;
+    this.driftCharge = 0;
+    this.stuckTimer = 0;
+    this.touchingWall = false;
+    this.lapClean = false;
   }
 
   /**
