@@ -14,6 +14,16 @@ npm install
 npm run dev          # http://127.0.0.1:5173
 ```
 
+Or build the whole game into one self-contained HTML file — no modules, no CDN,
+no separate assets — that plays anywhere you can open a page, phone included:
+
+```bash
+npm run artifact     # dist-artifact/apex-drift.html (~520 KB)
+```
+
+Touch controls appear automatically on a phone: steering under the left thumb,
+throttle, brake, drift and boost under the right.
+
 ## How a season works
 
 Eight rounds. Before each one a map is generated from a seed — its layout,

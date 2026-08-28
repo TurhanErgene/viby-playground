@@ -18,6 +18,8 @@ const hud = new Hud(hudRoot);
 input.bindTouch(touchRoot);
 
 const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
+// The HUD needs to know, so its bottom readouts can move clear of the thumbs.
+document.body.classList.toggle('touch-mode', isTouch);
 
 const game = {
   mode: 'menu',      // menu | garage | racing | result | season-end

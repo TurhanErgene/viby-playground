@@ -1,4 +1,8 @@
 :root {
+  /* The game commits to one dark world on purpose — a racing HUD reads as an
+     instrument panel, not a document. Every colour is declared here so the page
+     holds on any host background rather than borrowing one. */
+  color-scheme: dark;
   --bg: #0b0d12;
   --panel: rgba(14, 17, 24, 0.92);
   --line: rgba(255, 255, 255, 0.12);
@@ -184,6 +188,14 @@ kbd {
 .pos-list .me { color: var(--accent); font-weight: 700; }
 
 /* ---------------- touch ---------------- */
+/* With the thumb controls up, the bottom corners of the HUD are underneath
+   them. Lift the readouts clear rather than letting the two overlap. */
+body.touch-mode #hud .bl,
+body.touch-mode #hud .br { bottom: 108px; }
+body.touch-mode #hud .bl { left: 4px; }
+body.touch-mode #hud .br { right: 4px; }
+body.touch-mode .bar { width: 118px; }
+
 #touch { position: fixed; inset: 0; pointer-events: none; }
 #touch .pad { position: absolute; bottom: 18px; display: flex; gap: 10px; pointer-events: auto; }
 #touch .pad.left { left: 18px; }
@@ -196,6 +208,22 @@ kbd {
 }
 #touch button.big { width: 94px; height: 94px; background: rgba(47, 214, 168, 0.28); }
 #touch button.active { background: rgba(255, 255, 255, 0.3); }
+
+/* On a phone, four action buttons in a row crowd the steering off the screen.
+   Stack them two-by-two under the right thumb and leave the left thumb to
+   steer, which is the layout a phone is actually held in. */
+@media (max-width: 620px) {
+  #touch button { width: 66px; height: 66px; font-size: 11px; }
+  #touch button.big { width: 74px; height: 74px; }
+  #touch .pad.right {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    place-items: end;
+    gap: 9px;
+  }
+  body.touch-mode #hud .bl { bottom: 96px; }
+  body.touch-mode #hud .br { bottom: 172px; }
+}
 
 @media (max-width: 720px) {
   .screen { padding: 20px 18px; }
