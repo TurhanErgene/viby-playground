@@ -29,50 +29,59 @@ export const BUDGET = Object.freeze({
 
 /** Upgrade tracks. Level 0..5. `curve(l)` returns a 0..1 normalised value. */
 const lerp = (a, b, t) => a + (b - a) * t;
-const norm = (level) => Math.max(0, Math.min(1, level / 5));
+/**
+ * Upgrade levels do not pay off linearly: the last level of a track is worth
+ * more than the first. With a linear curve, early levels are far cheaper per
+ * point of effect and spreading credits thinly strictly dominates — which
+ * makes specialising for a map roll a trap rather than a strategy.
+ */
+const norm = (level) => {
+  const x = Math.max(0, Math.min(1, level / 5));
+  return 0.35 * x + 0.65 * x * x;
+};
 
 export const STATS = Object.freeze({
   power: {
     label: 'Powerplant',
     blurb: 'Top speed and pull on long straights.',
     icon: '⚡',
-    cost: [0, 900, 1500, 2400, 3800, 6000]
+    cost: [0, 2300, 2700, 3100, 3400, 3500]
   },
   gearbox: {
     label: 'Gearbox',
     blurb: 'Acceleration out of slow corners and off the line.',
     icon: '⚙',
-    cost: [0, 800, 1400, 2200, 3500, 5400]
+    cost: [0, 2000, 2350, 2650, 2900, 3100]
   },
   grip: {
     label: 'Tyres',
     blurb: 'Lateral bite. Decides how fast a corner can be taken.',
     icon: '◎',
-    cost: [0, 1000, 1700, 2700, 4200, 6600]
+    cost: [0, 2800, 3250, 3700, 4050, 4200]
   },
   brakes: {
     label: 'Brakes',
     blurb: 'Stopping force and stability under trail braking.',
     icon: '■',
-    cost: [0, 700, 1200, 2000, 3200, 5000]
+    cost: [0, 1400, 1600, 1850, 2000, 2150]
   },
   suspension: {
     label: 'Suspension',
     blurb: 'Soaks up broken ground, sand ruts and hard landings.',
     icon: '≈',
-    cost: [0, 850, 1450, 2300, 3600, 5600]
+    cost: [0, 2500, 2900, 3300, 3600, 3700]
   },
   aero: {
     label: 'Aero',
     blurb: 'Downforce at speed and control while airborne.',
     icon: '▲',
-    cost: [0, 950, 1600, 2500, 4000, 6200]
+    cost: [0, 1700, 2000, 2250, 2500, 2550]
   },
   nitro: {
     label: 'Nitro',
     blurb: 'Boost tank size, regen and burn strength.',
     icon: '◆',
-    cost: [0, 750, 1300, 2100, 3400, 5200]
+    cost: [0, 2500, 2900, 3300, 3600, 3700]
   }
 });
 

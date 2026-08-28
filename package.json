@@ -12,7 +12,8 @@
     "balance": "node scripts/balance-report.mjs",
     "sim": "node scripts/sim-check.mjs",
     "boost": "node scripts/boost-value.mjs",
-    "season": "node scripts/season-check.mjs"
+    "season": "node scripts/season-check.mjs",
+    "spec": "node scripts/specialisation-check.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

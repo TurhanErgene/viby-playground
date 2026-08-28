@@ -64,20 +64,23 @@ The thesis is measured, not asserted:
 
 | Budget | Measured swing in lap time |
 |---|---|
-| Skill | 31% |
-| Vehicle stats | 21% |
-| Map roll (luck) | 7% |
+| Skill | 30.5% |
+| Vehicle stats | 21.0% |
+| Map roll (luck) | 7.7% |
 
 ```bash
 npm run balance   # the three budgets across 120 random maps
 npm run sim       # live physics vs the pace model
 npm run boost     # what a drift exit is actually worth
+npm run spec      # whether building for a map beats hedging, at equal cost
 npm run season    # eight-round seasons, played end to end
 npm run smoke     # the real game in a real browser
 ```
 
 Over a full season, driving better is worth **+56 championship points**;
-allocating upgrades better is worth **+5**.
+allocating upgrades better is worth **+9**. Building for the map you think is
+coming gains about half a finishing position when you guess right, and costs
+about a third of one when you guess wrong.
 
 Full write-up, including how a map's demands are measured off its own geometry
 rather than authored by hand: [`docs/DESIGN.md`](docs/DESIGN.md).

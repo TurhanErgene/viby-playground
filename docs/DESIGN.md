@@ -14,9 +14,9 @@ swing in lap time. They live in `src/game/balance.js`:
 
 | Budget | Measured | What it is |
 |---|---|---|
-| **Skill** | **31%** | Clean lines, late braking, drift-boost chaining, nitro fusion |
-| **Stats** | **21%** | A fully maxed car versus a stock one, averaged over random maps |
-| **Luck**  | **7%**  | The swing the map roll puts on a build you already committed to |
+| **Skill** | **30.5%** | Clean lines, late braking, drift-boost chaining, nitro fusion |
+| **Stats** | **21.0%** | A fully maxed car versus a stock one, averaged over random maps |
+| **Luck**  | **7.7%** | The swing the map roll puts on a build you already committed to |
 
 The ordering is the design: **skill > stats > luck**. A player who reads corners
 and chains boosts beats a better-funded one. A bad map roll costs you real time
@@ -28,8 +28,8 @@ but never the race outright.
 Head-to-head, from the same report:
 
 ```
-great driver, stock car   vs  poor driver, maxed car : 53%
-good driver, wrong build  vs  ok driver, right build : 49%
+great driver, stock car   vs  poor driver, maxed car : 54%
+good driver, wrong build  vs  ok driver, right build : 54%
 equal drivers, +2 levels of car                      : 100%
 ```
 
@@ -41,7 +41,7 @@ Over a whole season (`npm run season`, 8 rounds × 3 seeds):
 
 ```
 points from driving better (sloppy -> sharp):  56
-points from spending smarter (spread -> chase): 5
+points from spending smarter (spread -> chase): 9
 ```
 
 ## 2. Every map is finishable; only the margin is gated
@@ -60,6 +60,43 @@ is time. This is enforced structurally by splitting each stat's effect in two
 So a maxed car is only ~21% better on average, while the *right* car for a given
 map can be dramatically better on the sections that map is made of. That is
 where the strategy lives.
+
+### Specialising has to be a real bet
+
+The brief this is built to says winning some maps should depend heavily on
+specific upgrades. That only holds if a car built for a map beats an evenly
+spread car **of the same cost** on the maps that want it, and loses on the ones
+that don't. `npm run spec` checks exactly that, at a mid-season budget:
+
+```
+average lap time: +1.0% where the map wants it, -0.8% where it does not
+average places gained over a balanced car: +0.47 where wanted, -0.28 elsewhere
+```
+
+Grip and nitro specialists swing over a full position either way; brakes and
+aero barely move (see below). It fails loudly if hedging ever becomes free.
+
+Two things had to change before this worked at all. Originally, upgrade costs
+rose steeply (¢900 → ¢6,000 across a track) while the effect stayed linear, so
+early levels were about five times more efficient per credit and spreading
+credits thinly **strictly dominated** — specialising for a map roll was a trap,
+not a strategy. Now:
+
+- **Costs are much flatter** within a track (roughly ¢2,500 → ¢3,700), and
+  priced against each stat's measured lap-time leverage. Tyres cost ¢18,000 to
+  max; brakes cost ¢9,000, because brakes buy far less pace.
+- **The effect curve is convex** (`0.35x + 0.65x²`), so the last level of a
+  track is worth more than the first, matching the cost curve instead of
+  fighting it.
+
+### Where this is weakest
+
+`brakes` and `aero` barely register in the pace model: braking zones and
+downforce are a small share of a lap, so no honest weighting makes them
+decisive. Their real value is in the *driving* — trail braking rotates the car,
+and air control decides whether a jump ends in a clean landing — which the
+model does not capture but the player feels. They are priced cheapest to match.
+If either were priced as if it bought pace, the garage would be lying.
 
 ## 3. Maps are random, and their demands are measured, not authored
 
@@ -152,6 +189,7 @@ The simulation is checked against the model rather than trusted:
   steering input the car holds **100–110% of the theoretical corner limit**, so
   the model and the car genuinely agree.
 - `npm run boost` — what the drift economy is worth, in metres and seconds.
+- `npm run spec` — whether building for a map beats hedging, at equal cost.
 - `npm run season` — eight-round seasons played end to end.
 - `npm run smoke` — the real game in a real browser on a pinned seed: menu,
   garage, purchase, race, drive, drift, HUD, console errors.
@@ -172,6 +210,9 @@ Worth recording, because each was invisible from the outside:
   stuck there permanently.
 - **`brakes` was tagged as wanted on 63% of maps while being worth 0.3% of lap
   time** — the trait tags were lying to the player.
+- **Hedging strictly dominated specialising**, even on maps that demanded the
+  specialist's stat, because steep cost curves met a linear effect curve. The
+  central strategic choice was a trap until both curves were rebuilt.
 
 ## 8. Tuning
 
