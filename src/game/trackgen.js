@@ -11,37 +11,37 @@ export const BIOMES = {
   speedway: {
     label: 'Speedway', sky: 0x86a9d8, ground: 0x6b7a52, weight: 1.0,
     points: [7, 9], radius: [340, 420], radiusVar: 0.16, corner: 0.35,
-    width: [17, 22], bankGain: 5.5, elevation: 7, jumps: [0, 1],
+    width: [20, 26], bankGain: 5.5, elevation: 7, jumps: [0, 1],
     mix: { asphalt: 0.90, gravel: 0.06, boost: 0.04 }
   },
   canyon: {
     label: 'Canyon', sky: 0xd8a978, ground: 0x8a5a3c, weight: 1.0,
     points: [12, 16], radius: [230, 290], radiusVar: 0.34, corner: 0.85,
-    width: [11, 15], bankGain: 3.0, elevation: 26, jumps: [0, 1],
+    width: [14, 18], bankGain: 3.0, elevation: 26, jumps: [0, 1],
     mix: { asphalt: 0.80, gravel: 0.16, boost: 0.04 }
   },
   dunes: {
     label: 'Dunes', sky: 0xe8c98d, ground: 0xc9a86a, weight: 1.0,
     points: [9, 13], radius: [280, 350], radiusVar: 0.28, corner: 0.55,
-    width: [14, 19], bankGain: 2.0, elevation: 34, jumps: [1, 3],
+    width: [17, 22], bankGain: 2.0, elevation: 34, jumps: [1, 3],
     mix: { asphalt: 0.58, sand: 0.30, gravel: 0.10, boost: 0.02 }
   },
   glacier: {
     label: 'Glacier', sky: 0xcfe4f2, ground: 0xd6e6ee, weight: 1.0,
     points: [9, 13], radius: [290, 360], radiusVar: 0.22, corner: 0.5,
-    width: [15, 20], bankGain: 3.5, elevation: 16, jumps: [0, 1],
+    width: [18, 23], bankGain: 3.5, elevation: 16, jumps: [0, 1],
     mix: { asphalt: 0.62, ice: 0.26, water: 0.08, boost: 0.04 }
   },
   skyway: {
     label: 'Skyway', sky: 0x7f8fd0, ground: 0x3d4358, weight: 0.85,
     points: [10, 14], radius: [270, 340], radiusVar: 0.24, corner: 0.6,
-    width: [10, 14], bankGain: 6.5, elevation: 44, jumps: [2, 4],
+    width: [13, 17], bankGain: 6.5, elevation: 44, jumps: [2, 4],
     mix: { asphalt: 0.92, boost: 0.08 }
   },
   circuit: {
     label: 'Circuit', sky: 0x9fb4c9, ground: 0x4f5a4a, weight: 1.0,
     points: [14, 18], radius: [220, 280], radiusVar: 0.30, corner: 0.95,
-    width: [12, 16], bankGain: 4.0, elevation: 12, jumps: [0, 1],
+    width: [15, 19], bankGain: 4.0, elevation: 12, jumps: [0, 1],
     mix: { asphalt: 0.82, gravel: 0.08, water: 0.04, boost: 0.06 }
   }
 };
@@ -345,6 +345,9 @@ export function generateTrack(seedInput, opts = {}) {
 
   // 6. Surfaces, then jumps (jumps need curvature, so they come last).
   assignSurfaces(rng, samples, biome);
+  // The grid and the run to the first corner are always clean tarmac, so a
+  // race never opens on a random patch of sand or a boost strip.
+  for (let k = -14; k <= 10; k++) samples[(k + n) % n].surface = 'asphalt';
   const jumps = addJumps(rng, samples, biome, length);
   recompute();
 

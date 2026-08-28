@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Apex Drift</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  <meta name="description" content="A 3D browser racing game of random maps, vehicle upgrades, and skill over luck." />
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <canvas id="stage"></canvas>
+  <div id="ui"></div>
+  <div id="hud" hidden></div>
+  <div id="touch" hidden>
+    <div class="pad left">
+      <button data-touch="left" aria-label="Steer left">◀</button>
+      <button data-touch="right" aria-label="Steer right">▶</button>
+    </div>
+    <div class="pad right">
+      <button data-touch="handbrake" aria-label="Handbrake">DRIFT</button>
+      <button data-touch="nitro" aria-label="Nitro">BOOST</button>
+      <button data-touch="brake" aria-label="Brake">BRAKE</button>
+      <button data-touch="throttle" class="big" aria-label="Throttle">GO</button>
+    </div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
