@@ -160,7 +160,20 @@ export class Rival {
   }
 
   update(dt, raceTime, racing = true) {
-    if (this.finished || !racing) { this.syncTransform(); return; }
+    if (!racing) { this.syncTransform(); return; }
+    if (this.finished) {
+      // Coast down and pull off the racing line instead of stopping dead on it,
+      // so the finishers do not pile up on the start/finish straight while the
+      // rest of the field is still coming through.
+      this.speed = Math.max(0, this.speed - 7 * dt);
+      this.progress += this.speed * dt;
+      this.index = (this.startIdx + Math.floor(this.progress / this.track.spacing)) %
+        this.track.samples.length;
+      const park = this.gridIndex % 2 ? 0.92 : -0.92;
+      this.lane += Math.max(-0.6 * dt, Math.min(0.6 * dt, park - this.lane));
+      this.syncTransform();
+      return;
+    }
     const t = this.track, n = t.samples.length;
 
     // Mistakes are the rival's share of luck: rarer the better the driver.

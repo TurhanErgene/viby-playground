@@ -17,6 +17,16 @@
 
 * { box-sizing: border-box; }
 
+/* Holding a control should never start selecting the page. Text stays
+   selectable only where someone would actually want to select it. */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+input, textarea, .selectable { -webkit-user-select: text; user-select: text; }
+
 html, body {
   margin: 0;
   height: 100%;
@@ -203,6 +213,7 @@ body.touch-mode .bar { width: 118px; }
 #touch button {
   width: 74px; height: 74px; border-radius: 50%;
   font-size: 12px; font-weight: 700;
+  touch-action: none;
   background: rgba(20, 24, 32, 0.68);
   border: 1px solid rgba(255, 255, 255, 0.22);
 }
@@ -232,3 +243,24 @@ body.touch-mode .bar { width: 118px; }
   #hud .corner { padding: 10px 12px; }
   .bar { width: 128px; }
 }
+
+/* Shown only if a race is running and the page has never seen a key press —
+   an embedded page gets no keyboard until it is focused, and nothing else on
+   screen would explain why the car is not moving. */
+#kb-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 20;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .5);
+}
+#kb-hint button { padding: 7px 12px; font-size: 12px; }

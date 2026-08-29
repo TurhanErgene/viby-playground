@@ -20,8 +20,10 @@ export class Input {
     this.touch = { left: false, right: false, throttle: false, brake: false, handbrake: false, nitro: false };
     this.enabled = true;
 
+    this.sawKey = false;
     addEventListener('keydown', (e) => {
       if (!this.enabled) return;
+      this.sawKey = true;
       if (Object.values(KEYMAP).flat().includes(e.code)) e.preventDefault();
       this.keys.add(e.code);
     });
@@ -47,16 +49,37 @@ export class Input {
     };
   }
 
-  sample(dt) {
+  /**
+   * Steering is ramped rather than binary, so a keyboard player can still be
+   * precise enough to hold a drift. Three different rates matter to the feel:
+   *
+   *   - turning INTO a corner ramps gently, and more gently the faster you go,
+   *     so a twitch at 190km/h does not spin the car
+   *   - COUNTER-steering ramps fast, because catching a slide is a reaction and
+   *     a slow rate here makes the car feel like it is ignoring you
+   *   - returning to centre is fastest of all
+   */
+  sample(dt, car = null) {
     const pad = this.pad();
     const wantLeft = this.held('left'), wantRight = this.held('right');
-    let targetSteer = (wantRight ? 1 : 0) - (wantLeft ? 1 : 0);
-    if (pad && Math.abs(pad.steer) > 0) targetSteer = pad.steer;
+    let target = (wantRight ? 1 : 0) - (wantLeft ? 1 : 0);
+    if (pad && Math.abs(pad.steer) > 0) {
+      // Curve the stick so small deflections are precise near centre.
+      const a = Math.abs(pad.steer);
+      target = Math.sign(pad.steer) * (a * a * 0.55 + a * 0.45);
+    }
 
-    // Ramp toward the target; snap back to centre faster than away from it.
-    const rate = targetSteer === 0 ? 7.5 : 4.2;
-    this.steer += Math.max(-rate * dt, Math.min(rate * dt, targetSteer - this.steer));
-    if (targetSteer === 0 && Math.abs(this.steer) < 0.02) this.steer = 0;
+    const speed = Math.abs(car?.vf ?? 0);
+    const slipping = (car?.slip ?? 0) > 0.18;
+    const reversing = target !== 0 && this.steer !== 0 && Math.sign(target) !== Math.sign(this.steer);
+
+    let rate;
+    if (target === 0) rate = 9.0;                       // release: snap back
+    else if (reversing || slipping) rate = 11.0;        // catching the car
+    else rate = 6.4 - Math.min(2.9, speed * 0.062);     // 6.4 crawling -> 3.5 flat out
+
+    this.steer += Math.max(-rate * dt, Math.min(rate * dt, target - this.steer));
+    if (target === 0 && Math.abs(this.steer) < 0.02) this.steer = 0;
 
     return {
       steer: this.steer,
@@ -77,6 +100,10 @@ export class Input {
       el.addEventListener('pointerup', set(false));
       el.addEventListener('pointercancel', set(false));
       el.addEventListener('pointerleave', set(false));
+      // Holding a control must not turn into a text selection or a long-press
+      // context menu, which is what a browser does with a held button by default.
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+      el.addEventListener('selectstart', (e) => e.preventDefault());
     }
   }
 }

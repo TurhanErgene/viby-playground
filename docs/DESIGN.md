@@ -193,6 +193,9 @@ The simulation is checked against the model rather than trusted:
 - `npm run season` — eight-round seasons played end to end.
 - `npm run smoke` — the real game in a real browser on a pinned seed: menu,
   garage, purchase, race, drive, drift, HUD, console errors.
+- `npm run fallbacks` — the failure paths on someone else's machine: a browser
+  with no WebGL, and an embedded page that never receives the keyboard. Both
+  must end in something a player can read and act on.
 
 ### Bugs these caught
 
@@ -214,7 +217,23 @@ Worth recording, because each was invisible from the outside:
   specialist's stat, because steep cost curves met a linear effect curve. The
   central strategic choice was a trap until both curves were rebuilt.
 
-## 8. Tuning
+## 8. Failing in the open
+
+The game can be embedded in a page it does not control, on hardware it cannot
+test. Two failures there are invisible from the inside, so both are handled
+explicitly rather than left to a black screen:
+
+- **No WebGL.** Checked before three.js is touched, and reported as a sentence
+  naming the likely cause, with the real error text kept selectable so it can
+  be copied into a bug report.
+- **No keyboard.** An embedded page receives key events only once it has focus,
+  and nothing on screen says so — the car simply refuses to move. If a race is
+  running and no key has ever arrived, the game says to click it, and offers
+  the on-screen controls as a way through that works with a mouse alone.
+
+Anything thrown during boot is caught and rendered the same way.
+
+## 9. Tuning
 
 Start in `src/game/balance.js`; it is the single source of truth. After any
 change, run `npm run balance` and `npm run season`. If the thesis line stops

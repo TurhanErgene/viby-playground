@@ -12,14 +12,85 @@ const uiRoot = document.getElementById('ui');
 const hudRoot = document.getElementById('hud');
 const touchRoot = document.getElementById('touch');
 
+/**
+ * A game that fails silently is impossible to report. Anything that stops the
+ * page booting gets shown on screen, with the actual message, rather than
+ * leaving a black rectangle.
+ */
+function showFatal(err) {
+  const detail = (err && (err.stack || err.message)) || String(err);
+  uiRoot.innerHTML = '';
+  const card = document.createElement('div');
+  card.className = 'screen';
+  card.style.maxWidth = '620px';
+  card.innerHTML = `
+    <h1 style="font-size:24px">Couldn't start</h1>
+    <p>The game failed to load in this browser. The details below say why —
+       they are worth copying if you report it.</p>
+    <pre class="selectable" style="white-space:pre-wrap;word-break:break-word;
+      background:rgba(255,255,255,.05);border:1px solid var(--line);
+      border-radius:8px;padding:12px;font-size:12px;color:var(--warn);
+      max-height:220px;overflow:auto"></pre>
+    <p class="hint">Most often this is WebGL being unavailable or blocked —
+       hardware acceleration switched off in the browser's settings is the
+       usual cause.</p>`;
+  card.querySelector('pre').textContent = detail;
+  uiRoot.appendChild(card);
+}
+
+addEventListener('error', (e) => { if (!booted) showFatal(e.error || e.message); });
+let booted = false;
+
+/** Fail with a useful sentence rather than a stack trace from deep in three.js. */
+function assertWebGL() {
+  const probe = document.createElement('canvas');
+  const gl = probe.getContext('webgl2') || probe.getContext('webgl');
+  if (!gl) {
+    throw new Error(
+      'WebGL is not available. This game needs it to draw anything.\n' +
+      'Try enabling hardware acceleration in your browser settings, ' +
+      'or open the page in a different browser.');
+  }
+}
+
+assertWebGL();
 const scene = new Scene(canvas);
 const input = new Input();
 const hud = new Hud(hudRoot);
 input.bindTouch(touchRoot);
 
+// A touchscreen laptop reports coarse pointers too, so ask for both signals
+// before hiding the keyboard hints and rearranging the HUD for thumbs.
 const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
-// The HUD needs to know, so its bottom readouts can move clear of the thumbs.
-document.body.classList.toggle('touch-mode', isTouch);
+let showPad = isTouch;
+document.body.classList.toggle('touch-mode', showPad);
+
+/**
+ * An embedded page only receives key events once it has focus, and nothing on
+ * screen says so. If a race is running and no key has ever been pressed, say
+ * what to do and offer the on-screen controls as a way through.
+ */
+function setPad(on) {
+  showPad = on;
+  document.body.classList.toggle('touch-mode', on);
+  touchRoot.hidden = !on || game.mode !== 'racing';
+}
+
+addEventListener('pointerdown', () => { try { window.focus(); } catch { /* cross-origin */ } });
+
+function keyboardHint() {
+  if (hintShown || showPad || input.sawKey) return;
+  hintShown = true;
+  const el = document.createElement('div');
+  el.id = 'kb-hint';
+  el.innerHTML = `<span>Click the game once to use the keyboard</span>
+    <button id="kb-pad">Use on-screen controls</button>`;
+  document.body.appendChild(el);
+  el.querySelector('#kb-pad').onclick = () => { setPad(true); el.remove(); };
+  const clear = () => { el.remove(); removeEventListener('keydown', clear); };
+  addEventListener('keydown', clear);
+}
+let hintShown = false;
 
 const game = {
   mode: 'menu',      // menu | garage | racing | result | season-end
@@ -93,7 +164,7 @@ function startRace() {
   scene.follow(race.player, 1, { snap: true });
 
   hud.show(true);
-  touchRoot.hidden = !isTouch;
+  touchRoot.hidden = !showPad;
 
   // Make the mechanics announce themselves — an invisible mechanic is unused.
   race.player.onEvent = (kind, data) => {
@@ -155,7 +226,7 @@ function frame(now) {
     while (accumulator >= STEP && steps++ < 40) {
       const controls = game.autoDrive && game.pilot
         ? game.pilot.control(game.race.player, STEP)
-        : input.sample(STEP);
+        : input.sample(STEP, game.race.player);
       state = game.race.update(STEP, controls);
       accumulator -= STEP;
       if (state === 'over') break;
@@ -166,6 +237,7 @@ function frame(now) {
     scene.follow(game.race.player, dt);
     hud.update(game.race, dt);
 
+    if (game.race.time > 1.2) keyboardHint();
     if (state === 'over') toResult();
   } else {
     // Menus fly over the map you are about to race.
@@ -181,7 +253,13 @@ function frame(now) {
 function recover(car) { car.rejoin(); }
 
 // Exposed for the browser smoke test to inspect scene state.
-globalThis.__apex = { game, scene, input };
+globalThis.__apex = { game, scene, input, setPad };
 
-toMenu();
-requestAnimationFrame(frame);
+try {
+  toMenu();
+  requestAnimationFrame(frame);
+  booted = true;
+} catch (err) {
+  showFatal(err);
+  throw err;
+}

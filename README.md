@@ -85,6 +85,7 @@ npm run boost     # what a drift exit is actually worth
 npm run spec      # whether building for a map beats hedging, at equal cost
 npm run season    # eight-round seasons, played end to end
 npm run smoke     # the real game in a real browser
+npm run fallbacks # what a player sees when WebGL or the keyboard is missing
 ```
 
 Over a full season, driving better is worth **+56 championship points**;

@@ -14,7 +14,8 @@
     "boost": "node scripts/boost-value.mjs",
     "season": "node scripts/season-check.mjs",
     "spec": "node scripts/specialisation-check.mjs",
-    "artifact": "node scripts/build-artifact.mjs"
+    "artifact": "node scripts/build-artifact.mjs",
+    "fallbacks": "node scripts/fallback-check.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",

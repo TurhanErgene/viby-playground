@@ -57,11 +57,67 @@ export class Race {
       if (r.lap > this.laps) this.finish(r);
     }
 
+    if (live) this.resolveContacts(dt);
+
     if (this.player.finished && this.state !== 'over') {
       this.state = 'over';
       this.result = this.buildResult();
     }
     return this.state;
+  }
+
+  /**
+   * Contact between the player and the rivals. Rivals run on the pace model
+   * rather than full physics, so the player absorbs most of a hit — but ramming
+   * is not free: a solid hit costs the rival pace and knocks them off their
+   * line, so using them as brakes is slower than going round.
+   */
+  resolveContacts(dt) {
+    const p = this.player;
+    if (p.finished) return;
+    const R = 2.1;                 // one car, as a circle
+    const MIN = R * 2;
+
+    for (const r of this.rivals) {
+      if (r.finished) continue;
+      // Tracks loop back on themselves, so ignore cars passing far above or
+      // below — they are somewhere else entirely, not alongside.
+      if (Math.abs((r.y ?? 0) - p.y) > 3.5) continue;
+
+      let dx = p.x - r.x, dz = p.z - r.z;
+      let d = Math.hypot(dx, dz);
+      if (d >= MIN) continue;
+      if (d < 1e-3) { dx = 1; dz = 0; d = 1e-3; }
+      const nx = dx / d, nz = dz / d;
+
+      // Separate. The player gives way more than the car on rails.
+      const overlap = MIN - d;
+      p.x += nx * overlap * 0.8;
+      p.z += nz * overlap * 0.8;
+
+      const pv = p.worldVelocity;
+      const rs = r.sample ?? this.track.samples[r.index];
+      const rvx = rs.tx * r.speed, rvz = rs.tz * r.speed;
+
+      // Closing speed along the line between them.
+      const closing = (pv.x - rvx) * nx + (pv.z - rvz) * nz;
+      if (closing < 0) {
+        // Kill the approach and add a little separation, so cars nudge apart
+        // rather than grinding through each other frame after frame.
+        const j = -closing * 1.35;
+        p.addWorldVelocity(nx * j, nz * j);
+        const force = Math.min(1, -closing / 14);
+        p.vf *= 1 - force * 0.22;
+        if (force > 0.25) {
+          p.driftCharge *= 1 - force * 0.5;
+          p.onEvent?.('contact', { force });
+        }
+        // The rival loses time and gets knocked wide.
+        r.mistakeTimer = Math.max(r.mistakeTimer, force * 1.1);
+        r.lane += Math.sign(-((p.x - r.x) * rs.nx + (p.z - r.z) * rs.nz) || 1) * force * 0.35;
+        r.lane = Math.max(-1.1, Math.min(1.1, r.lane));
+      }
+    }
   }
 
   finish(entry) {

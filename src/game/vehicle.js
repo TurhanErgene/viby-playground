@@ -68,6 +68,24 @@ export class Vehicle {
   }
 
   get speed() { return Math.hypot(this.vf, this.vl); }
+
+  /** Velocity in world space. The car stores it in its own frame. */
+  get worldVelocity() {
+    const cos = Math.cos(this.yaw), sin = Math.sin(this.yaw);
+    return { x: this.vf * cos - this.vl * sin, z: this.vf * sin + this.vl * cos };
+  }
+
+  setWorldVelocity(x, z) {
+    const cos = Math.cos(this.yaw), sin = Math.sin(this.yaw);
+    this.vf = x * cos + z * sin;
+    this.vl = -x * sin + z * cos;
+  }
+
+  addWorldVelocity(x, z) {
+    const v = this.worldVelocity;
+    this.setWorldVelocity(v.x + x, v.z + z);
+  }
+
   get kmh() { return this.speed * 3.6; }
 
   update(dt, ctrl, raceTime) {
@@ -246,22 +264,45 @@ export class Vehicle {
       this.telemetry.offTrackTime += dt;
       this.lapClean = false;
       if (over > SHOULDER) {
-        // Hard barrier: you never lose the car entirely, you lose the lap time.
+        // Resolve to the barrier, then treat the hit properly: split velocity
+        // into the wall's tangent and normal. A glancing scrape should cost
+        // almost nothing and let you keep running along the wall; only a
+        // steep hit should really punish you. Scaling speed by a flat factor
+        // regardless of angle is what made contact feel arbitrary.
+        const dir = Math.sign(loc.lateral) || 1;
         const push = over - SHOULDER;
-        const dir = Math.sign(loc.lateral);
         this.x -= loc.sample.nx * dir * push;
         this.z -= loc.sample.nz * dir * push;
-        this.vl *= -0.25;
-        if (!this.touchingWall) {
-          // The impact costs real speed — but only once. Scraping along the
-          // barrier just scrubs, otherwise a car pinned to a wall stops dead
-          // and can never rejoin.
-          this.vf *= 0.72;
-          this.driftCharge *= 0.4;
-          this.telemetry.wallHits++;
-          this.onEvent?.('wall');
+
+        const s0 = loc.sample;
+        const v = this.worldVelocity;
+        const speed = Math.hypot(v.x, v.z);
+        let vt = v.x * s0.tx + v.z * s0.tz;          // along the wall
+        let vn = v.x * s0.nx + v.z * s0.nz;          // into the wall
+
+        const intoWall = vn * dir > 0;
+        if (intoWall) {
+          // How square-on the hit is: 0 = a graze, 1 = straight into it.
+          const bite = Math.min(1, Math.abs(vn) / Math.max(4, speed));
+          vn = -vn * 0.28;                            // small bounce back on track
+          vt *= 1 - bite * 0.62;                      // the real cost of the angle
+          this.setWorldVelocity(vt * s0.tx + vn * s0.nx, vt * s0.tz + vn * s0.nz);
+
+          if (bite > 0.28) {
+            this.driftCharge *= 1 - bite * 0.7;
+            if (!this.touchingWall) {
+              this.telemetry.wallHits++;
+              this.onEvent?.('wall', { bite });
+            }
+          }
+          // Scrub off the yaw so the car ends up running along the barrier
+          // instead of pinballing nose-first down it.
+          const wallYaw = Math.atan2(s0.tz, s0.tx);
+          let dy = ((wallYaw - this.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+          this.yaw += dy * Math.min(1, dt * 6 * (0.3 + bite));
+          this.yawRate *= 0.4;
         } else {
-          this.vf *= 1 - 0.55 * dt;
+          this.vf *= 1 - 0.35 * dt;                   // sliding along it
         }
         this.touchingWall = true;
       } else {
