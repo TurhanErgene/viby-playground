@@ -6,6 +6,7 @@ self-contained — no build step, no shared dependencies.
 | Project | What it is |
 | --- | --- |
 | [`eraser-border-wars/`](eraser-border-wars/) | Touch game: carve up a hand-drawn country by flipping a two-tone eraser |
+| [`grid-fill/`](grid-fill/) | Number puzzle: draw each region yourself instead of letting the game snap rectangles. Daily board, par scoring |
 | [`skipping-rocks/`](skipping-rocks/) | Low-poly 3D game: throw a skipping stone from a first-person view, then chase it down the valley |
 | [`snippets/`](snippets/) | Small reusable pieces lifted out of the projects |
 
