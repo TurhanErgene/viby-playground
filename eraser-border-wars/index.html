@@ -135,17 +135,53 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 .oddsread .kp b{color:var(--face-plus)}
 .oddsread .km b{color:var(--face-minus)}
 .oddsread .kr b{color:var(--face-rim)}
-.hand{display:flex; gap:6px}
-.hand:empty{display:none}
-.card-chip{
-  flex:1 1 0; min-width:0; cursor:pointer; text-align:center; padding:9px 6px;
-  font:600 12px/1.15 "Familjen Grotesk",sans-serif; color:var(--ink);
-  background:transparent; border:1.5px solid var(--edge); border-left:4px solid var(--cc); border-radius:3px;
+.hand{
+  display:flex; justify-content:center; align-items:flex-end;
+  height:134px; padding-top:26px; transition:opacity .2s;
 }
-.card-chip small{display:block; font:400 10px/1.3 Karla,sans-serif; color:var(--ink-soft)}
-.card-chip[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink); border-left-color:var(--cc)}
-.card-chip[aria-pressed="true"] small{color:var(--paper); opacity:.75}
-.card-chip:focus-visible{outline:2px solid var(--stamp); outline-offset:2px}
+.hand:empty{display:none; height:0; padding:0}
+.slot{flex:0 0 auto; margin:0 -4px; transform-origin:50% 130%}
+.pcard{
+  position:relative; width:76px; height:106px; padding:13px 4px 15px; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  background:var(--panel); color:var(--ink);
+  border:1.5px solid var(--ink); border-radius:6px;
+  box-shadow:0 3px 9px -6px var(--shadow);
+  transform-origin:50% 130%;
+  transition:transform .2s cubic-bezier(.2,.85,.3,1.1), box-shadow .2s, border-color .2s;
+}
+.pcard .rank{
+  position:absolute; top:5px; left:6px; color:var(--cc);
+  font:700 10px/1 "Familjen Grotesk",sans-serif; letter-spacing:.06em;
+}
+.pcard .rank.br{top:auto; left:auto; bottom:5px; right:6px; transform:rotate(180deg)}
+.pcard svg{width:33px; height:33px; display:block; overflow:visible}
+.pcard .nm{font:700 11px/1 "Familjen Grotesk",sans-serif; letter-spacing:-.01em}
+.pcard .rl{font:400 8.5px/1.15 Karla,sans-serif; color:var(--ink-soft); text-align:center; padding:0 2px}
+.pcard.armed{
+  transform:translateY(-20px) scale(1.07); border-color:var(--cc); border-width:2px;
+  box-shadow:0 14px 20px -12px var(--shadow);
+}
+.pcard.armed .rl{color:var(--cc)}
+.pcard:focus-visible{outline:2px solid var(--stamp); outline-offset:3px}
+.pcard.dealt{animation:deal .5s cubic-bezier(.2,.9,.3,1.05)}
+.pcard.playing{animation:playcard .45s cubic-bezier(.4,0,.7,.4) forwards}
+@keyframes deal{
+  from{transform:translate(30px,-190px) rotate(-24deg) scale(.7); opacity:0}
+  60%{opacity:1}
+  to{transform:none; opacity:1}
+}
+@keyframes playcard{
+  to{transform:translateY(-120px) rotate(6deg) scale(.75); opacity:0}
+}
+.mini{
+  display:inline-block; width:7px; height:10px; margin-left:2px; vertical-align:-1px;
+  border:1px solid var(--edge); border-radius:1px; opacity:.8;
+  background:repeating-linear-gradient(45deg, var(--c) 0 1.5px, transparent 1.5px 3.5px);
+}
+@media (prefers-reduced-motion:reduce){
+  .card.dealt,.card.playing{animation-duration:.01s}
+}
 
 /* ---------- flip stage ---------- */
 .stage{
@@ -321,14 +357,19 @@ var ROUNDS = 12;          // the bell
 var RIM = 0.10;           // chance of landing on the narrow edge
 var HAND_MAX = 3;
 var CARD_IDS = ['double','shield','reflip','judge'];
+var SVG_OPEN = '<svg viewBox="0 0 40 40" fill="none" stroke="var(--cc)" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
 var CARDS = {
-  double: {name:'Double',  hint:'plus pays twice', tone:'plus',
+  double: {name:'Double',  rank:'D', hint:'pays twice', tone:'plus',
+           art: SVG_OPEN + '<path d="M7.5 15.2h11.2M13 9.6v11.3"/><path d="M21.4 25h11.2M27 19.4v11.3" opacity=".5"/></svg>',
            armed:'Double armed — if it lands plus, you take the bite twice over.'},
-  shield: {name:'Shield',  hint:'eats a minus',    tone:'minus',
+  shield: {name:'Shield',  rank:'S', hint:'eats a minus', tone:'minus',
+           art: SVG_OPEN + '<path d="M20 5.6 32.4 10.4v10.9c0 7.7-6.6 12.2-12.4 14.3C14.2 33.5 7.6 29 7.6 21.3V10.4L20 5.6Z"/><path d="M20 13.2v9.4" opacity=".45"/></svg>',
            armed:'Shield armed — a minus costs you nothing.'},
-  reflip: {name:'Re-flip', hint:'second throw',    tone:'rim',
+  reflip: {name:'Re-flip', rank:'R', hint:'throw again', tone:'rim',
+           art: SVG_OPEN + '<path d="M32.4 20.6A12.4 12.4 0 1 1 28 11"/><path d="M30.2 5.4v7h-7"/></svg>',
            armed:'Re-flip armed — a minus buys you one more throw.'},
-  judge:  {name:'Judge',   hint:'+15% believable', tone:'rim',
+  judge:  {name:'Judge',   rank:'J', hint:'+15% odds', tone:'rim',
+           art: SVG_OPEN + '<path d="M20 7.4v25M11.4 33.2h17.2M8.2 13.4h23.6"/><path d="M8.2 13.4 4.4 22.4a4.4 4.4 0 0 0 7.8 0L8.2 13.4Z"/><path d="M31.8 13.4 28 22.4a4.4 4.4 0 0 0 7.8 0l-4-9Z"/></svg>',
            armed:'Judge armed — the others are on your side this once.'}
 };
 
@@ -337,7 +378,7 @@ var S = {
   owner:null, jitter:null, np:2, seat:0, cpu:[], turn:0,
   phase:'draw',            // draw | confirm | flip | over
   claim:[], claimSet:{}, target:-1, capped:false,
-  round:1, hands:[[],[],[],[]], armed:null, odds:null, alive:[],
+  round:1, hands:[[],[],[],[]], armed:null, odds:null, justDrew:-1, alive:[],
   fx:null, sketch:null, spin:0, winner:-1
 };
 
@@ -639,36 +680,51 @@ function renderOdds(){
 
 function renderHand(){
   var host = document.getElementById('hand');
+  if (S.phase === 'flip'){            // leave the played card mid-animation
+    host.style.opacity = '.5'; host.style.pointerEvents = 'none';
+    return;
+  }
   host.innerHTML = '';
   if (S.phase === 'over') return;
   var live = !S.cpu[S.turn] && S.turn === S.seat && (S.phase === 'draw' || S.phase === 'confirm');
-  var hand = S.hands[S.seat];
-  host.style.opacity = live ? '' : '.45';
+  var hand = S.hands[S.seat], n = hand.length;
+  var armedAt = live ? hand.indexOf(S.armed) : -1;
+  host.style.opacity = live ? '' : '.5';
   host.style.pointerEvents = live ? '' : 'none';
-  for (var i=0;i<hand.length;i++){
-    (function(id){
-      var def = CARDS[id];
+  for (var i=0;i<n;i++){
+    (function(id, i){
+      var def = CARDS[id], mid = (n-1)/2;
+      var slot = document.createElement('div');
+      slot.className = 'slot';
+      slot.style.transform = 'rotate(' + ((i-mid)*8).toFixed(1) + 'deg) translateY(' + (Math.abs(i-mid)*5).toFixed(1) + 'px)';
+      slot.style.zIndex = String(10 + (i === armedAt ? 20 : i));
       var b = document.createElement('button');
       b.type = 'button';
-      b.className = 'card-chip';
+      b.className = 'pcard' + (i === armedAt ? ' armed' : '') + (i === S.justDrew ? ' dealt' : '');
       b.style.setProperty('--cc', 'var(--face-' + def.tone + ')');
-      b.setAttribute('aria-pressed', String(live && S.armed === id));
-      b.disabled = !live;
-      b.innerHTML = def.name + '<small>' + def.hint + '</small>';
+      b.setAttribute('aria-pressed', String(i === armedAt));
+      b.setAttribute('aria-label', def.name + ' card — ' + def.hint);
+      b.innerHTML = '<span class="rank">' + def.rank + '</span>' + def.art +
+                    '<span class="nm">' + def.name + '</span>' +
+                    '<span class="rl">' + def.hint + '</span>' +
+                    '<span class="rank br">' + def.rank + '</span>';
       b.addEventListener('click', function(){
-        S.armed = (S.armed === id) ? null : id;
-        if (S.armed) say(def.armed, S.turn);
+        S.armed = (S.armed === id && i === armedAt) ? null : id;
+        say(S.armed ? def.armed : 'Card back in hand.', S.turn);
         renderHand(); renderOdds();
       });
-      host.appendChild(b);
-    })(hand[i]);
+      slot.appendChild(b);
+      host.appendChild(slot);
+    })(hand[i], i);
   }
+  S.justDrew = -1;
 }
 
 function drawCard(p){
   var id = CARD_IDS[(Math.random()*CARD_IDS.length)|0];
   S.hands[p].push(id);
   if (S.hands[p].length > HAND_MAX) S.hands[p].shift();
+  if (p === S.seat) S.justDrew = S.hands[p].length - 1;
   return id;
 }
 
@@ -798,16 +854,26 @@ function tumble(face, caption, done){
 function doFlip(){
   if (S.phase !== 'confirm') return;
   var me = S.turn;
+  var played = document.querySelector('#hand .pcard.armed');
+  var delay = 0;
+  if (played){ played.className = 'pcard playing'; delay = 380; }
+
   S.phase = 'flip';
   renderDock();
   S.odds = claimOdds(S.claim, me, true);
   var card = S.armed;
   var face = rollFace(S.odds);
 
+  setTimeout(function(){ toss(face, card, me); }, delay);
+}
+
+function toss(face, card, me){
   document.getElementById('verdict').classList.remove('show');
   document.getElementById('stage').classList.add('on');
 
-  var opener = S.cpu[me] ? nameOf(me) + ' flips the eraser…' : 'in the air…';
+  var opener = S.cpu[me]
+    ? nameOf(me) + ' flips the eraser…'
+    : (card ? CARDS[card].name + ' down. In the air…' : 'in the air…');
   tumble(face, opener, function(){
     if (face === 'minus' && card === 'reflip'){
       var second = rollFace(S.odds);
@@ -1089,9 +1155,10 @@ function renderHUD(){
     el.className = 'score' + (p === S.turn && S.phase !== 'over' ? ' on' : '') + (S.alive[p] ? '' : ' out');
     el.style.setProperty('--c', col(p));
     var share = Math.round(countOf(p) / total * 100);
-    var held = S.hands[p].length;
+    var backs = '';
+    for (var h=0;h<S.hands[p].length;h++) backs += '<span class="mini"></span>';
     el.innerHTML = '<span class="who">' + nameOf(p) +
-                   (held ? '<span class="cards-n" title="cards held">' + held + '</span>' : '') +
+                   (backs ? '<span title="cards held">' + backs + '</span>' : '') +
                    '</span><span class="pct">' + (S.alive[p] ? share + '%' : '—') + '</span>';
     host.appendChild(el);
   }

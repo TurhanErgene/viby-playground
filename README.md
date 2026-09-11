@@ -1,17 +1,16 @@
 # viby-playground
-Things I do using my phone and claude
 
-## eraser-border-wars
+Things I do using my phone and Claude. One folder per project, each
+self-contained — no build step, no shared dependencies.
 
-The schoolyard game: a hand-drawn country split between players, a two-tone
-eraser flipped as a coin. Paint a bite out of someone else's land with your
-finger, flip the eraser — red `+` and you take it, blue `-` and you hand over
-the same amount from your own side.
+| Project | What it is |
+| --- | --- |
+| [`eraser-border-wars/`](eraser-border-wars/) | Touch game: carve up a hand-drawn country by flipping a two-tone eraser |
+| [`snippets/`](snippets/) | Small reusable pieces lifted out of the projects |
 
-The flip is not a straight coin. The odds move with the bite you drew: hugging
-your own border makes it believable, greed makes it a long shot, and you see
-the numbers before you commit. The rim pays out a card you keep — Double,
-Shield, Re-flip, Judge — and you choose which flip to spend it on. A bell ends
-recess after 14 rounds, so playing it safe has a cost.
+## Adding a project
 
-Single file, no build, touch-first: open `eraser-border-wars/index.html`.
+Make a folder, put an `index.html` (or whatever it needs) inside it, and give
+it a `README.md` saying what it is and how to run it. Add a row to the table
+above. Keep projects independent so one can be rewritten or deleted without
+touching the others.

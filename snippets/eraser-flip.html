@@ -1,0 +1,175 @@
+<meta charset="utf-8">
+<title>Eraser Flip</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* ---------------------------------------------------------------
+   The eraser: a CSS 3-D box that tumbles end over end and settles
+   on one of four faces. Two big faces (red +, blue −) and the two
+   narrow rims between them, which is what a real eraser can land on
+   when you throw it. Drop the .flip-stage markup, this CSS block and
+   the tumble() function into any page; nothing else is needed.
+   --------------------------------------------------------------- */
+:root{
+  --ink:#1B2540; --paper:#F6F1E4; --soft:#616B87;
+  --red:#C6392E; --blue:#2A5FC4; --rim:#E9DFC6; --rim-ink:#5B4A2A;
+  --shadow:rgba(27,37,64,.2);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#E5EDF8; --paper:#0E1724; --soft:#93A6C2; --shadow:rgba(0,0,0,.6); }
+}
+
+.flip-stage{ perspective:900px; width:260px; height:210px; display:grid; place-items:center; position:relative }
+
+/* the ground shadow — optional, but it sells the height of the toss */
+.flip-stage .shade{
+  position:absolute; bottom:24px; width:158px; height:18px; border-radius:50%;
+  background:radial-gradient(ellipse at center, var(--shadow) 0%, transparent 72%);
+}
+
+.toss{ transform-style:preserve-3d }                     /* handles the up-and-down */
+.eraser{                                                  /* handles the spin */
+  position:relative; width:200px; height:104px; transform-style:preserve-3d;
+  transform:rotateX(0deg);
+}
+
+/* Every face is centred on the box, then pushed out along its own axis.
+   200 x 104 x 46 box, so the offsets are 23 (depth/2), 52 (height/2), 100 (width/2). */
+.face{
+  position:absolute; left:50%; top:50%; display:grid; place-items:center;
+  border-radius:5px; font:700 54px/1 system-ui, sans-serif; color:#fff4ea;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);
+}
+.f-front,.f-back{ width:200px; height:104px }
+.f-front { background:var(--red);  transform:translate(-50%,-50%) translateZ(23px) }
+.f-back  { background:var(--blue); transform:translate(-50%,-50%) rotateY(180deg) translateZ(23px) }
+
+/* the two long rims */
+.f-top,.f-bottom{
+  width:200px; height:46px; background:var(--rim); color:var(--rim-ink);
+  font-size:20px; letter-spacing:.3em;
+}
+.f-top    { transform:translate(-50%,-50%) rotateX(90deg)  translateZ(52px) }
+.f-bottom { transform:translate(-50%,-50%) rotateX(-90deg) translateZ(52px) }
+
+/* the short ends — never landed on, but they close the box when it spins */
+.f-left,.f-right{ width:46px; height:104px; background:linear-gradient(var(--red) 0 50%, var(--blue) 50% 100%) }
+.f-left  { transform:translate(-50%,-50%) rotateY(-90deg) translateZ(100px) }
+.f-right { transform:translate(-50%,-50%) rotateY(90deg)  translateZ(100px) }
+
+.spinning{ transition:transform 2.25s cubic-bezier(.18,.86,.24,1) }
+.tossing { animation:toss 2.25s cubic-bezier(.3,.05,.3,1) }
+@keyframes toss{
+  0%  { transform:translateY(38px) scale(.86) }
+  35% { transform:translateY(-52px) scale(1.04) }
+  70% { transform:translateY(-8px) scale(1) }
+  85% { transform:translateY(-22px) scale(1) }
+  100%{ transform:translateY(0) scale(1) }
+}
+@media (prefers-reduced-motion:reduce){
+  .spinning{ transition-duration:.35s }
+  .tossing { animation:none }
+}
+
+/* ---- page chrome, not part of the component ---- */
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100dvh; background:var(--paper); color:var(--ink);
+  font:15px/1.5 system-ui, sans-serif;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:24px 16px;
+}
+h1{ margin:0; font-size:19px; letter-spacing:-.01em }
+p.lede{ margin:0 0 10px; color:var(--soft); max-width:34em; text-align:center }
+#out{ min-height:1.6em; font-weight:700; font-size:18px }
+button{
+  font:600 15px/1 system-ui, sans-serif; padding:14px 22px; border-radius:4px; cursor:pointer;
+  border:1.5px solid var(--ink); background:var(--ink); color:var(--paper);
+}
+button:active{ transform:translateY(1px) }
+code{ font:500 13px/1.5 ui-monospace, Menlo, monospace; color:var(--soft) }
+</style>
+
+<h1>Eraser Flip</h1>
+<p class="lede">Red side, blue side, and the narrow rim in between. Weighted 45 / 45 / 10.</p>
+
+<div class="flip-stage">
+  <div class="shade"></div>
+  <div class="toss" id="toss">
+    <div class="eraser" id="eraser">
+      <div class="face f-front">+</div>
+      <div class="face f-back">−</div>
+      <div class="face f-top">RIM</div>
+      <div class="face f-bottom">RIM</div>
+      <div class="face f-left"></div>
+      <div class="face f-right"></div>
+    </div>
+  </div>
+</div>
+
+<p id="out">&nbsp;</p>
+<button id="go" type="button">Flip the eraser</button>
+<p><code>tumble(face, done)</code> — face is 'plus', 'minus' or 'rim'</p>
+
+<script>
+(function(){
+'use strict';
+
+/* Which rotation about X shows which face.
+   Rotating the box by -90° about X swings the top face's normal (+y) round
+   to +z, i.e. toward the viewer; +90° brings the bottom face up; 180° the
+   back. Faces the tumble can land on are therefore 0 / 90 / 180 / 270. */
+var FACE_ANGLE = { plus:0, minus:180 };          // rim is 90 or 270, picked at random
+
+var eraser = document.getElementById('eraser');
+var toss = document.getElementById('toss');
+var spin = 0;                                     // keeps growing so it always turns forwards
+
+function tumble(face, done){
+  var angle = FACE_ANGLE[face];
+  if (angle === undefined) angle = Math.random() < 0.5 ? 90 : 270;
+
+  // four whole turns, then however much more is needed to land on `angle`
+  spin += 360 * 4 + ((angle - (spin % 360)) + 360) % 360;
+
+  eraser.classList.remove('spinning'); toss.classList.remove('tossing');
+  void eraser.offsetWidth;                        // restart both animations
+  eraser.classList.add('spinning'); toss.classList.add('tossing');
+
+  // a little yaw and roll so it reads as a thrown object, not a turning panel
+  eraser.style.transform =
+    'rotateX(' + spin + 'deg)' +
+    ' rotateY(' + (-16 + Math.random()*8).toFixed(1) + 'deg)' +
+    ' rotateZ(' + (Math.random()*7 - 3.5).toFixed(1) + 'deg)';
+
+  var reduced = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  setTimeout(done || function(){}, reduced ? 400 : 2350);
+}
+
+/* The outcome is decided before the animation runs — the tumble is told
+   where to land. Weight it however the game needs. */
+function roll(){
+  var r = Math.random();
+  if (r < 0.45) return 'plus';
+  if (r < 0.90) return 'minus';
+  return 'rim';
+}
+
+var go = document.getElementById('go');
+var out = document.getElementById('out');
+go.addEventListener('click', function(){
+  go.disabled = true;
+  out.textContent = 'in the air…';
+  out.style.color = 'var(--soft)';
+  var face = roll();
+  tumble(face, function(){
+    out.textContent = face === 'plus' ? '+  you take it'
+                    : face === 'minus' ? '−  you pay it'
+                    : 'the rim!';
+    out.style.color = face === 'plus' ? 'var(--red)'
+                    : face === 'minus' ? 'var(--blue)' : 'var(--rim-ink)';
+    if (navigator.vibrate){ try { navigator.vibrate(face === 'minus' ? [30,60,30] : 45); } catch(e){} }
+    go.disabled = false;
+  });
+});
+})();
+</script>
