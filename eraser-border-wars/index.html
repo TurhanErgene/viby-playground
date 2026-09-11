@@ -1,4 +1,6 @@
+<meta charset="utf-8">
 <title>Eraser Border Wars</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Karla:wght@400;500;700&family=Patrick+Hand&display=swap">
 <style>
@@ -34,7 +36,7 @@ body{
   overscroll-behavior:none; -webkit-text-size-adjust:100%;
 }
 #app{
-  height:100dvh; display:flex; flex-direction:column;
+  height:100dvh; min-height:420px; display:flex; flex-direction:column;
   padding:0 14px; padding-block:10px 12px; gap:10px; max-width:560px; margin:0 auto;
 }
 
@@ -230,8 +232,8 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
   <div class="card">
     <h3>How the schoolyard played it</h3>
     <p class="lede">One eraser, red on one side, blue on the other. No dice, no board — just a map you drew yourselves.</p>
-    <div class="rule"><span class="k">01</span><p>Trace a bite out of a rival's land with your finger. It has to touch your own border. <em>By eye — nobody measured anything.</em></p></div>
-    <div class="rule"><span class="k">02</span><p>Greedy claims get trimmed back to <b>28%</b> of what you already hold. <em>This is the part the loudest kid used to shout about.</em></p></div>
+    <div class="rule"><span class="k">01</span><p>Drag your finger across the rival tiles you want, starting on one that touches your border. One tap takes one tile. <em>By eye — nobody measured anything.</em></p></div>
+    <div class="rule"><span class="k">02</span><p>Your bite stops at <b>15%</b> of what you already hold. <em>This is the part the loudest kid used to shout about.</em></p></div>
     <div class="rule"><span class="k">03</span><p>Flip the eraser. <b style="color:#C6392E">Red +</b> and the land is yours. <b style="color:#2A5FC4">Blue −</b> and you hand over the same amount from your own side instead.</p></div>
     <div class="rule"><span class="k">04</span><p>Land on the narrow rim and you draw a power: <b>Double</b>, <b>Shield</b> or <b>Spill</b>. <em>Rare. Worth the shouting.</em></p></div>
     <div class="rule"><span class="k">05</span><p>Lose every tile and you're out. Last map-holder standing wins the recess.</p></div>
@@ -276,7 +278,7 @@ var POWERS = [
 var S = {
   owner:null, jitter:null, np:2, seat:0, cpu:[], turn:0,
   phase:'draw',            // draw | confirm | flip | over
-  claim:[], target:-1, path:[], drawing:false,
+  claim:[], claimSet:{}, target:-1, capped:false,
   shield:[false,false,false,false], alive:[],
   fx:null, sketch:null, spin:0, winner:-1
 };
@@ -479,7 +481,7 @@ function newGame(np, seat){
   for (var p=0;p<np;p++) S.cpu.push(p !== seat);
   S.alive = []; for (p=0;p<np;p++) S.alive.push(true);
   S.shield = [false,false,false,false];
-  S.turn = 0; S.claim = []; S.target = -1; S.path = []; S.sketch = null;
+  S.turn = 0; S.claim = []; S.claimSet = {}; S.target = -1; S.capped = false; S.sketch = null;
   S.fx = null; S.winner = -1; S.phase = 'draw';
   fit();
   renderHUD();
@@ -524,63 +526,6 @@ function grabNear(ownerP, fromP, count, exclude){
   return out;
 }
 
-function inPoly(px, py, pts){
-  var inside = false;
-  for (var i=0, j=pts.length-1; i<pts.length; j=i++){
-    var xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y;
-    if (((yi > py) !== (yj > py)) && (px < (xj-xi)*(py-yi)/(yj-yi) + xi)) inside = !inside;
-  }
-  return inside;
-}
-
-function claimFromPath(pts, me){
-  if (pts.length < 4) return {err:'Trace a loop around the piece you want.'};
-  var hit = [], tally = {}, i;
-  for (i=0;i<S.owner.length;i++){
-    var o = S.owner[i];
-    if (o === SEA || o === me) continue;
-    if (inPoly(xOf(i)+0.5, yOf(i)+0.5, pts)){ hit.push(i); tally[o] = (tally[o]||0)+1; }
-  }
-  if (!hit.length) return {err:'That loop caught no rival land. Draw it over someone else’s colour.'};
-
-  var target = -1, best = 0;
-  for (var key in tally) if (tally[key] > best){ best = tally[key]; target = +key; }
-
-  var set = {}, pool = [];
-  for (i=0;i<hit.length;i++) if (S.owner[hit[i]] === target){ set[hit[i]] = 1; pool.push(hit[i]); }
-
-  // keep only the connected piece that touches my border
-  var seen = {}, comps = [];
-  for (i=0;i<pool.length;i++){
-    if (seen[pool[i]]) continue;
-    var comp = [], stack = [pool[i]]; seen[pool[i]] = 1;
-    while (stack.length){
-      var c = stack.pop(); comp.push(c);
-      var ns = nbrs(c);
-      for (var k=0;k<ns.length;k++) if (set[ns[k]] && !seen[ns[k]]){ seen[ns[k]] = 1; stack.push(ns[k]); }
-    }
-    comps.push(comp);
-  }
-  var chosen = null;
-  for (i=0;i<comps.length;i++){
-    var touches = false;
-    for (var m=0;m<comps[i].length;m++) if (touchesOwner(comps[i][m], me)) { touches = true; break; }
-    if (touches && (!chosen || comps[i].length > chosen.length)) chosen = comps[i];
-  }
-  if (!chosen) return {err:'Your claim has to start at your own border. Bite from where you already are.'};
-
-  var cap = maxClaim(me), trimmed = false;
-  if (chosen.length > cap){
-    var keep = {};
-    for (i=0;i<chosen.length;i++) keep[chosen[i]] = 1;
-    var ex = {};
-    for (i=0;i<S.owner.length;i++) if (S.owner[i] === target && !keep[i]) ex[i] = 1;
-    chosen = grabNear(target, me, cap, ex);
-    trimmed = true;
-  }
-  return {cells:chosen, target:target, trimmed:trimmed, cap:cap};
-}
-
 /* ============ turn flow ============ */
 function alivePlayers(){
   var out = [];
@@ -600,7 +545,7 @@ function nextTurn(){
   beginTurn();
 }
 function beginTurn(){
-  S.claim = []; S.target = -1; S.path = []; S.sketch = null;
+  S.claim = []; S.claimSet = {}; S.target = -1; S.capped = false; S.sketch = null;
   S.phase = 'draw';
   renderHUD(); renderDock(); draw();
   if (S.cpu[S.turn]) setTimeout(cpuTurn, 900);
@@ -625,9 +570,10 @@ function cpuTurn(){
   var want = Math.max(3, Math.round(maxClaim(me) * (0.6 + Math.random()*0.4)));
   var cells = grabNear(target, me, want, null);
   if (!cells.length){ nextTurn(); return; }
-  S.claim = cells; S.target = target; S.sketch = cells;
+  S.claim = cells; S.claimSet = {}; S.target = target; S.sketch = cells;
+  for (i=0;i<cells.length;i++) S.claimSet[cells[i]] = 1;
   S.phase = 'confirm';
-  say(nameOf(me) + ' squints at the map and marks off ' + cells.length + ' tiles of ' + nameOf(target) + '…', me);
+  say(nameOf(me) + ' squints at the map and marks off ' + tiles(cells.length) + ' of ' + possOf(target) + ' land…', me);
   renderDock(); draw();
   setTimeout(function(){ if (S.phase === 'confirm') doFlip(); }, 1100);
 }
@@ -672,10 +618,12 @@ function landed(face, power){
   var title, sub;
   if (face === 'plus'){
     title = 'plus';
-    sub = cells.length + ' tiles change hands.';
+    sub = tiles(cells.length) + (cells.length === 1 ? ' changes' : ' change') + ' hands.';
   } else if (face === 'minus'){
     title = 'minus';
-    sub = S.shield[me] ? 'Your shield eats it. Nothing moves.' : 'You pay ' + cells.length + ' tiles of your own.';
+    sub = S.shield[me]
+      ? (me === S.seat ? 'Your shield eats it. Nothing moves.' : possOf(me) + ' shield eats it. Nothing moves.')
+      : (nameOf(me) + ' ' + verb(me,'pay') + ' ' + tiles(cells.length) + ' from ' + possOf(me) + ' own side.');
   } else {
     title = power.name;
     sub = 'The rim! — ' + power.line + '.';
@@ -700,25 +648,25 @@ function resolve(face, power, me, target, cells){
   var i, gained = [], lost = [];
   if (face === 'plus'){
     for (i=0;i<cells.length;i++){ S.owner[cells[i]] = me; gained.push(cells[i]); }
-    say('Red side up. ' + nameOf(me) + ' takes ' + cells.length + ' tiles off ' + nameOf(target) + '.', me);
+    say('Red side up. ' + nameOf(me) + ' ' + verb(me,'take') + ' ' + tiles(cells.length) + ' off ' + objOf(target) + '.', me);
   } else if (face === 'minus'){
     if (S.shield[me]){
       S.shield[me] = false;
-      say('Blue side up — but ' + nameOf(me) + '’s shield holds. The border stays put.', me);
+      say('Blue side up — but ' + possOf(me) + ' shield holds. The border stays put.', me);
     } else {
       var give = grabNear(me, target, cells.length, null);
       for (i=0;i<give.length;i++){ S.owner[give[i]] = target; lost.push(give[i]); }
-      say('Blue side up. ' + nameOf(me) + ' hands ' + give.length + ' tiles to ' + nameOf(target) + '.', target);
+      say('Blue side up. ' + nameOf(me) + ' ' + verb(me,'hand') + ' ' + tiles(give.length) + ' to ' + objOf(target) + '.', target);
     }
   } else {
     for (i=0;i<cells.length;i++){ S.owner[cells[i]] = me; gained.push(cells[i]); }
     if (power.id === 'double'){
       var extra = grabNear(target, me, cells.length, null);
       for (i=0;i<extra.length;i++){ S.owner[extra[i]] = me; gained.push(extra[i]); }
-      say('On the rim — double! ' + nameOf(me) + ' walks off with ' + gained.length + ' tiles.', me);
+      say('On the rim — double! ' + nameOf(me) + ' ' + verb(me,'walk') + ' off with ' + tiles(gained.length) + '.', me);
     } else if (power.id === 'shield'){
       S.shield[me] = true;
-      say('On the rim — shield. ' + cells.length + ' tiles taken, and the next minus is void.', me);
+      say('On the rim — shield. ' + tiles(cells.length) + ' taken, and the next minus against ' + objOf(me) + ' is void.', me);
     } else {
       var ring = {}, own = {};
       for (i=0;i<gained.length;i++) own[gained[i]] = 1;
@@ -730,13 +678,13 @@ function resolve(face, power, me, target, cells){
         }
       }
       for (var key in ring){ S.owner[+key] = me; gained.push(+key); }
-      say('On the rim — spill! The bite bleeds outward: ' + gained.length + ' tiles.', me);
+      say('On the rim — spill! The bite bleeds outward: ' + tiles(gained.length) + '.', me);
     }
   }
 
   S.fx = {cells: gained.concat(lost), color: face === 'minus' && !lost.length ? me : (lost.length ? target : me), until: performance.now() + 900};
-  S.claim = []; S.sketch = null; S.path = [];
-  renderHUD(); draw(); tick();
+  S.claim = []; S.claimSet = {}; S.sketch = null;
+  renderHUD(); draw();
 
   setTimeout(function(){
     if (refreshAlive()){
@@ -750,10 +698,19 @@ function resolve(face, power, me, target, cells){
 }
 
 /* ============ rendering ============ */
+function sizeApp(){
+  var h = window.innerHeight || document.documentElement.clientHeight || 0;
+  if (window.visualViewport && window.visualViewport.height) h = window.visualViewport.height;
+  document.getElementById('app').style.height = Math.max(Math.round(h), 420) + 'px';
+}
+
 function fit(){
+  sizeApp();
   var board = document.querySelector('.board');
   var r = board.getBoundingClientRect();
-  cell = Math.max(6, Math.floor(Math.min(r.width / COLS, r.height / ROWS)));
+  var bw = Math.max(r.width || 0, 240);
+  var bh = Math.max(r.height || 0, 240);   // a collapsed flex row must not erase the map
+  cell = Math.max(6, Math.floor(Math.min(bw / COLS, bh / ROWS)));
   dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   var w = cell * COLS, h = cell * ROWS;
   canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
@@ -794,21 +751,23 @@ function paint(){
   drawEdges(function(a,b){ return (a===SEA) !== (b===SEA); }, THEME.coast, Math.max(1.6, cell*0.13));
   drawEdges(function(a,b){ return a!==SEA && b!==SEA && a!==b; }, THEME.pencil, Math.max(1.2, cell*0.1));
 
-  // pending claim
-  if (S.claim.length) paintClaim(S.claim, col(S.turn));
-
-  // finger path
-  if (S.path.length > 1){
+  // where your finger can start: rival tiles pressed against your border
+  if (S.phase === 'draw' && !S.cpu[S.turn] && !S.claim.length && S.alive[S.turn]){
     ctx.save();
-    ctx.strokeStyle = THEME.ink; ctx.globalAlpha = 0.75;
-    ctx.lineWidth = 2; ctx.setLineDash([6,5]); ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(S.path[0].x*cell, S.path[0].y*cell);
-    for (i=1;i<S.path.length;i++) ctx.lineTo(S.path[i].x*cell, S.path[i].y*cell);
-    if (!S.drawing) ctx.closePath();
-    ctx.stroke();
+    ctx.globalAlpha = 0.85;
+    for (i=0;i<S.owner.length;i++){
+      var oo = S.owner[i];
+      if (oo === SEA || oo === S.turn || !touchesOwner(i, S.turn)) continue;
+      ctx.fillStyle = THEME.paper;
+      ctx.beginPath();
+      ctx.arc(xOf(i)*cell + cell/2, yOf(i)*cell + cell/2, Math.max(1.8, cell*0.13), 0, Math.PI*2);
+      ctx.fill();
+    }
     ctx.restore();
   }
+
+  // pending claim
+  if (S.claim.length) paintClaim(S.claim, col(S.turn));
 
   // resolution flash
   if (S.fx){
@@ -911,6 +870,10 @@ function tick(){
 
 /* ============ HUD + dock ============ */
 function nameOf(p){ return p === S.seat ? 'You' : NAMES[p]; }
+function objOf(p){ return p === S.seat ? 'you' : NAMES[p]; }
+function possOf(p){ return p === S.seat ? 'your' : NAMES[p] + '\u2019s'; }
+function verb(p, stem){ return p === S.seat ? stem : stem + 's'; }
+function tiles(n){ return n + (n === 1 ? ' tile' : ' tiles'); }
 
 function renderHUD(){
   var host = document.getElementById('scores');
@@ -963,14 +926,14 @@ function renderDock(){
     return;
   }
   if (S.phase === 'draw'){
-    if (!S.claim.length) say('Your turn. Trace a bite out of a rival’s land — it has to touch your border. Up to ' + maxClaim(S.turn) + ' tiles.', S.turn);
+    if (!S.claim.length) say('Your turn. Drag across the rival tiles you want — start on one touching your border. Up to ' + maxClaim(S.turn) + ' tiles.', S.turn);
     host.appendChild(btn('Skip turn', function(){ say('You wave it off.', S.turn); nextTurn(); }, true));
-    host.appendChild(pill('trace your bite on the map', S.turn));
+    host.appendChild(pill('drag across the map', S.turn));
     return;
   }
   if (S.phase === 'confirm'){
-    host.appendChild(btn('Redraw', function(){
-      S.claim = []; S.path = []; S.target = -1; S.phase = 'draw';
+    host.appendChild(btn('Start over', function(){
+      S.claim = []; S.claimSet = {}; S.target = -1; S.capped = false; S.phase = 'draw';
       renderDock(); draw();
     }, true));
     host.appendChild(btn('Flip the eraser', doFlip));
@@ -981,45 +944,98 @@ function renderDock(){
   }
 }
 
-/* ============ input ============ */
-function toCell(e){
+/* ============ input: paint the bite, tap or drag ============ */
+var brush = {on:false, px:null, py:null};
+
+function cellAtPx(clientX, clientY){
   var r = canvas.getBoundingClientRect();
-  return {x:(e.clientX - r.left)/cell, y:(e.clientY - r.top)/cell};
+  var x = Math.floor((clientX - r.left) / cell), y = Math.floor((clientY - r.top) / cell);
+  if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return -1;
+  return idx(x,y);
 }
-canvas.addEventListener('pointerdown', function(e){
-  if (S.phase !== 'draw' || S.cpu[S.turn] || !S.owner) return;
-  canvas.setPointerCapture(e.pointerId);
-  S.drawing = true; S.claim = []; S.path = [toCell(e)];
+
+function claimLine(me){
+  var n = S.claim.length;
+  return 'Claiming ' + tiles(n) + ' off ' + objOf(S.target) + '. ' +
+         (S.capped ? 'That is your ' + maxClaim(me) + '-tile limit — nobody believed a bigger bite. ' : '') +
+         'Blue side and you hand back ' + n + '.';
+}
+
+function addCell(c, me){
+  if (c < 0 || S.claimSet[c] || S.owner[c] !== S.target) return;
+  if (S.claim.length >= maxClaim(me)){ S.capped = true; return; }
+  var ns = nbrs(c), joined = false;
+  for (var i=0;i<ns.length;i++) if (S.claimSet[ns[i]]){ joined = true; break; }
+  if (!joined && !touchesOwner(c, me)) return;      // the bite stays one piece
+  S.claim.push(c); S.claimSet[c] = 1;
+  say(claimLine(me), me);
   draw();
-  e.preventDefault();
-});
-canvas.addEventListener('pointermove', function(e){
-  if (!S.drawing) return;
-  var p = toCell(e), last = S.path[S.path.length-1];
-  if (Math.abs(p.x-last.x) + Math.abs(p.y-last.y) > 0.12){ S.path.push(p); draw(); }
-  e.preventDefault();
-});
-function endStroke(e){
-  if (!S.drawing) return;
-  S.drawing = false;
-  var me = S.turn;
-  var res = claimFromPath(S.path, me);
-  if (res.err){
-    say(res.err, me);
-    S.path = []; S.claim = [];
-    draw();
-    return;
-  }
-  S.claim = res.cells; S.target = res.target; S.path = []; S.phase = 'confirm';
-  var line = 'Claiming ' + res.cells.length + ' tiles off ' + nameOf(res.target) + '. ' +
-    (res.trimmed ? 'Trimmed to your ' + res.cap + '-tile limit — no one believed that big a bite. ' : '') +
-    'Blue side and you hand back ' + res.cells.length + '.';
-  say(line, me);
-  renderDock(); draw();
-  if (e) e.preventDefault();
 }
-canvas.addEventListener('pointerup', endStroke);
-canvas.addEventListener('pointercancel', endStroke);
+
+function strokeStart(clientX, clientY){
+  if (!S.owner || S.phase !== 'draw' || S.cpu[S.turn]) return false;
+  var me = S.turn, c = cellAtPx(clientX, clientY);
+  if (c < 0) return false;
+  var o = S.owner[c];
+  if (o === me){ say('That is your own land. Start on a rival tile that touches your border.', me); draw(); return false; }
+  if (o === SEA){ say('That is open water. Start on a rival tile that touches your border.', me); draw(); return false; }
+  if (!touchesOwner(c, me)){ say('Too deep — start where ' + nameOf(o) + ' meets your own border.', o); draw(); return false; }
+  S.target = o; S.claim = []; S.claimSet = {}; S.capped = false;
+  brush.on = true;
+  var r = canvas.getBoundingClientRect();
+  brush.px = (clientX - r.left)/cell; brush.py = (clientY - r.top)/cell;
+  addCell(c, me);
+  return true;
+}
+
+function strokeMove(clientX, clientY){
+  if (!brush.on) return;
+  var me = S.turn, r = canvas.getBoundingClientRect();
+  var px = (clientX - r.left)/cell, py = (clientY - r.top)/cell;
+  var dx = px - brush.px, dy = py - brush.py;
+  var steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 3));
+  for (var i=1;i<=steps;i++){
+    var x = Math.floor(brush.px + dx*i/steps), y = Math.floor(brush.py + dy*i/steps);
+    if (x < 0 || y < 0 || x >= COLS || y >= ROWS) continue;
+    addCell(idx(x,y), me);
+  }
+  brush.px = px; brush.py = py;
+}
+
+function strokeEnd(){
+  if (!brush.on) return;
+  brush.on = false;
+  if (!S.claim.length) return;
+  S.phase = 'confirm';
+  say(claimLine(S.turn), S.turn);
+  renderDock(); draw();
+}
+
+// Touch first — no pointer capture, no passive-listener surprises.
+if (('ontouchstart' in window) || navigator.maxTouchPoints > 0){
+  canvas.addEventListener('touchstart', function(e){
+    var t = e.changedTouches[0];
+    if (strokeStart(t.clientX, t.clientY)) e.preventDefault();
+  }, {passive:false});
+  canvas.addEventListener('touchmove', function(e){
+    if (!brush.on) return;
+    var t = e.changedTouches[0];
+    strokeMove(t.clientX, t.clientY);
+    e.preventDefault();
+  }, {passive:false});
+  canvas.addEventListener('touchend', function(e){
+    if (!brush.on) return;
+    strokeEnd(); e.preventDefault();
+  }, {passive:false});
+  canvas.addEventListener('touchcancel', strokeEnd);
+}
+
+// Mouse/trackpad, and a fallback wherever touch events never arrive.
+canvas.addEventListener('mousedown', function(e){
+  if (strokeStart(e.clientX, e.clientY)) e.preventDefault();
+});
+window.addEventListener('mousemove', function(e){ strokeMove(e.clientX, e.clientY); });
+window.addEventListener('mouseup', strokeEnd);
 
 /* ============ sheets ============ */
 var pendingPlayers = 2, pendingSeat = 0;
@@ -1073,11 +1089,14 @@ var mq = window.matchMedia('(prefers-color-scheme: dark)');
   readTheme(); renderHUD(); draw();
 });
 window.addEventListener('resize', function(){ fit(); draw(); });
+window.addEventListener('orientationchange', function(){ setTimeout(function(){ fit(); draw(); }, 120); });
+if (window.visualViewport) window.visualViewport.addEventListener('resize', function(){ fit(); draw(); });
 if (window.ResizeObserver){
   new ResizeObserver(function(){ fit(); draw(); }).observe(document.querySelector('.board'));
 }
 
 readTheme();
+sizeApp();
 newGame(2, 0);
 tick();
 })();
