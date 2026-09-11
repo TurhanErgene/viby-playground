@@ -10,6 +10,7 @@
   --ink:#1B2540; --ink-soft:#616B87; --edge:rgba(27,37,64,.16);
   --stamp:#C6392E; --shadow:rgba(27,37,64,.14);
   --hatch:rgba(27,37,64,.55);
+  --face-plus:#C6392E; --face-minus:#2A5FC4; --face-rim:#B0851F;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -18,6 +19,7 @@
     --ink:#E5EDF8; --ink-soft:#93A6C2; --edge:rgba(180,205,238,.22);
     --stamp:#F0705F; --shadow:rgba(0,0,0,.5);
     --hatch:rgba(215,232,255,.5);
+    --face-plus:#F0705F; --face-minus:#6C9CF2; --face-rim:#E8BB56;
   }
 }
 :root[data-theme="dark"]{
@@ -26,9 +28,11 @@
   --ink:#E5EDF8; --ink-soft:#93A6C2; --edge:rgba(180,205,238,.22);
   --stamp:#F0705F; --shadow:rgba(0,0,0,.5);
   --hatch:rgba(215,232,255,.5);
+  --face-plus:#F0705F; --face-minus:#6C9CF2; --face-rim:#E8BB56;
 }
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{
   margin:0; background:var(--paper); color:var(--ink);
@@ -64,11 +68,24 @@ body{
 .score .who{font:600 12px/1.1 "Familjen Grotesk",sans-serif; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .score .pct{margin-left:auto; font:700 13px/1 Karla,sans-serif; font-variant-numeric:tabular-nums; color:var(--c)}
 .score .sh{font-size:11px}
+.cards-n{
+  display:inline-block; min-width:15px; margin-left:5px; padding:1px 0; text-align:center;
+  border:1px solid var(--edge); border-radius:2px;
+  font:700 10px/1.2 Karla,sans-serif; color:var(--ink-soft); font-variant-numeric:tabular-nums;
+}
+.round{
+  flex:0 0 auto; display:flex; align-items:baseline; gap:4px; padding:7px 9px 8px;
+  border-radius:3px; background:var(--panel); border:1px solid var(--edge);
+  font:500 11px/1.1 "Familjen Grotesk",sans-serif; color:var(--ink-soft);
+}
+.round b{font-weight:700; font-size:13px; color:var(--ink); font-variant-numeric:tabular-nums}
+.round.warn{border-color:var(--stamp); color:var(--stamp)}
+.round.warn b{color:var(--stamp)}
 
 /* ---------- board ---------- */
 .board{
   flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center;
-  position:relative;
+  position:relative; overflow:hidden;
 }
 canvas{
   touch-action:none; border-radius:2px;
@@ -102,6 +119,33 @@ button.act[disabled]{opacity:.35; pointer-events:none}
 @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.hintpill .dot{animation:none; opacity:.8}}
 button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); outline-offset:2px}
+
+/* ---------- odds + cards ---------- */
+.odds{display:flex; flex-direction:column; gap:6px}
+.oddsbar{display:flex; height:9px; border-radius:2px; overflow:hidden; background:var(--panel); border:1px solid var(--edge)}
+.oddsbar span{display:block; height:100%; transition:flex-grow .18s}
+.oddsbar .sp{background:var(--face-plus)}
+.oddsbar .sr{background:var(--face-rim)}
+.oddsbar .sm{background:var(--face-minus)}
+.oddsread{
+  display:flex; gap:12px; font:500 12px/1 Karla,sans-serif; color:var(--ink-soft);
+  font-variant-numeric:tabular-nums;
+}
+.oddsread b{font-weight:700}
+.oddsread .kp b{color:var(--face-plus)}
+.oddsread .km b{color:var(--face-minus)}
+.oddsread .kr b{color:var(--face-rim)}
+.hand{display:flex; gap:6px}
+.hand:empty{display:none}
+.card-chip{
+  flex:1 1 0; min-width:0; cursor:pointer; text-align:center; padding:9px 6px;
+  font:600 12px/1.15 "Familjen Grotesk",sans-serif; color:var(--ink);
+  background:transparent; border:1.5px solid var(--edge); border-left:4px solid var(--cc); border-radius:3px;
+}
+.card-chip small{display:block; font:400 10px/1.3 Karla,sans-serif; color:var(--ink-soft)}
+.card-chip[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink); border-left-color:var(--cc)}
+.card-chip[aria-pressed="true"] small{color:var(--paper); opacity:.75}
+.card-chip:focus-visible{outline:2px solid var(--stamp); outline-offset:2px}
 
 /* ---------- flip stage ---------- */
 .stage{
@@ -206,6 +250,11 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 
   <div class="dock">
     <p class="say" id="say"></p>
+    <div class="odds" id="odds" hidden>
+      <div class="oddsbar"><span class="sp" id="segP"></span><span class="sr" id="segR"></span><span class="sm" id="segM"></span></div>
+      <div class="oddsread" id="oddsRead"></div>
+    </div>
+    <div class="hand" id="hand"></div>
     <div class="actions" id="actions"></div>
   </div>
 </div>
@@ -233,10 +282,10 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
     <h3>How the schoolyard played it</h3>
     <p class="lede">One eraser, red on one side, blue on the other. No dice, no board — just a map you drew yourselves.</p>
     <div class="rule"><span class="k">01</span><p>Drag your finger across the rival tiles you want, starting on one that touches your border. One tap takes one tile. <em>By eye — nobody measured anything.</em></p></div>
-    <div class="rule"><span class="k">02</span><p>Your bite stops at <b>15%</b> of what you already hold. <em>This is the part the loudest kid used to shout about.</em></p></div>
-    <div class="rule"><span class="k">03</span><p>Flip the eraser. <b style="color:#C6392E">Red +</b> and the land is yours. <b style="color:#2A5FC4">Blue −</b> and you hand over the same amount from your own side instead.</p></div>
-    <div class="rule"><span class="k">04</span><p>Land on the narrow rim and you draw a power: <b>Double</b>, <b>Shield</b> or <b>Spill</b>. <em>Rare. Worth the shouting.</em></p></div>
-    <div class="rule"><span class="k">05</span><p>Lose every tile and you're out. Last map-holder standing wins the recess.</p></div>
+    <div class="rule"><span class="k">02</span><p>The odds move with the bite. Hug your own border and keep it modest and the others believe you; a deep greedy spear into their middle is a flip you will usually lose. You see the numbers before you commit. <em>This is the part the loudest kid used to shout about.</em></p></div>
+    <div class="rule"><span class="k">03</span><p>Flip the eraser. <b style="color:#C6392E">Red +</b> and the land is yours. <b style="color:#2A5FC4">Blue −</b> and you hand over the same amount — taken from the ground right behind the push, so a deep raid risks the shoulder you launched it from.</p></div>
+    <div class="rule"><span class="k">04</span><p>Land on the narrow rim and you keep the land <em>and</em> draw a card. Arm one card before any flip: <b>Double</b> pays twice on a plus, <b>Shield</b> eats a minus, <b>Re-flip</b> buys a second throw, <b>Judge</b> talks the odds up. A card sits in your hand until it actually does something.</p></div>
+    <div class="rule"><span class="k">05</span><p>The bell ends recess after <b>12 rounds</b> — whoever holds the most map wins. Lose every tile before that and you're out early.</p></div>
     <div class="actions" style="margin-top:16px"><button class="act" id="closeRules" type="button">Back to the map</button></div>
   </div>
 </div>
@@ -266,20 +315,29 @@ var LIGHT = ['#C6392E','#2A5FC4','#3C7F55','#C4901F'];
 var DARK  = ['#F0705F','#6C9CF2','#63BE86','#E8BB56'];
 var NAMES = ['Red','Blue','Green','Ochre'];
 var SEA = -1, FREE = -2;
-var CLAIM_SHARE = 0.15, CLAIM_CEIL = 26;
+var CLAIM_SHARE = 0.20, CLAIM_CEIL = 30;
 
-var POWERS = [
-  {id:'double', name:'Double', line:'the bite doubles — take it twice over'},
-  {id:'shield', name:'Shield', line:'the bite holds, and the next minus against you is void'},
-  {id:'spill',  name:'Spill',  line:'the bite holds and bleeds one row further'}
-];
+var ROUNDS = 12;          // the bell
+var RIM = 0.10;           // chance of landing on the narrow edge
+var HAND_MAX = 3;
+var CARD_IDS = ['double','shield','reflip','judge'];
+var CARDS = {
+  double: {name:'Double',  hint:'plus pays twice', tone:'plus',
+           armed:'Double armed — if it lands plus, you take the bite twice over.'},
+  shield: {name:'Shield',  hint:'eats a minus',    tone:'minus',
+           armed:'Shield armed — a minus costs you nothing.'},
+  reflip: {name:'Re-flip', hint:'second throw',    tone:'rim',
+           armed:'Re-flip armed — a minus buys you one more throw.'},
+  judge:  {name:'Judge',   hint:'+15% believable', tone:'rim',
+           armed:'Judge armed — the others are on your side this once.'}
+};
 
 /* ============ state ============ */
 var S = {
   owner:null, jitter:null, np:2, seat:0, cpu:[], turn:0,
   phase:'draw',            // draw | confirm | flip | over
   claim:[], claimSet:{}, target:-1, capped:false,
-  shield:[false,false,false,false], alive:[],
+  round:1, hands:[[],[],[],[]], armed:null, odds:null, alive:[],
   fx:null, sketch:null, spin:0, winner:-1
 };
 
@@ -480,7 +538,7 @@ function newGame(np, seat){
   S.cpu = [];
   for (var p=0;p<np;p++) S.cpu.push(p !== seat);
   S.alive = []; for (p=0;p<np;p++) S.alive.push(true);
-  S.shield = [false,false,false,false];
+  S.hands = [[],[],[],[]]; S.armed = null; S.odds = null; S.round = 1;
   S.turn = 0; S.claim = []; S.claimSet = {}; S.target = -1; S.capped = false; S.sketch = null;
   S.fx = null; S.winner = -1; S.phase = 'draw';
   fit();
@@ -497,11 +555,21 @@ function touchesOwner(cellI, p){
   return false;
 }
 // Grow a blob of `count` cells belonging to `ownerP`, starting from its cells that border `fromP`.
-function grabNear(ownerP, fromP, count, exclude){
-  var ex = exclude || {};
-  var seeds = [], i;
-  for (i=0;i<S.owner.length;i++){
-    if (S.owner[i] === ownerP && !ex[i] && touchesOwner(i, fromP)) seeds.push(i);
+function grabNear(ownerP, fromP, count, exclude, nearCells){
+  var ex = exclude || {}, near = null, i, k;
+  if (nearCells && nearCells.length){
+    near = {};
+    for (i=0;i<nearCells.length;i++){
+      var ns0 = nbrs(nearCells[i]);
+      for (k=0;k<ns0.length;k++) if (S.owner[ns0[k]] === ownerP) near[ns0[k]] = 1;
+    }
+  }
+  var seeds = [];
+  if (near){ for (var key in near) if (!ex[key]) seeds.push(+key); }
+  if (!seeds.length){
+    for (i=0;i<S.owner.length;i++){
+      if (S.owner[i] === ownerP && !ex[i] && touchesOwner(i, fromP)) seeds.push(i);
+    }
   }
   if (!seeds.length){
     for (i=0;i<S.owner.length;i++) if (S.owner[i] === ownerP && !ex[i]) seeds.push(i);
@@ -526,6 +594,84 @@ function grabNear(ownerP, fromP, count, exclude){
   return out;
 }
 
+/* ============ believability ============ */
+// How much of the bite leans on your own border, against how greedy it is.
+function claimOdds(cells, me, withCard){
+  if (!cells || !cells.length) return null;
+  var set = {}, i, k, shared = 0, per = 0;
+  for (i=0;i<cells.length;i++) set[cells[i]] = 1;
+  for (i=0;i<cells.length;i++){
+    var c = cells[i], x = xOf(c), y = yOf(c);
+    var sides = [x > 0 ? c-1 : -1, x < COLS-1 ? c+1 : -1, y > 0 ? c-COLS : -1, y < ROWS-1 ? c+COLS : -1];
+    for (k=0;k<4;k++){
+      var nb = sides[k];
+      if (nb < 0){ per++; continue; }
+      if (set[nb]) continue;
+      per++;
+      if (S.owner[nb] === me) shared++;
+    }
+  }
+  var reach = per ? shared / per : 0;
+  var rn = Math.max(0, Math.min(1, reach / 0.45));
+  var greed = Math.min(1, cells.length / Math.max(1, maxClaim(me)));
+  var pl = 0.38 + 0.30*rn - 0.22*greed;
+  if (withCard && S.armed === 'judge') pl += 0.15;
+  pl = Math.max(0.22, Math.min(0.72, pl));
+  return {p:pl, rim:RIM, minus:Math.max(0, 1 - pl - RIM), reach:rn, greed:greed, n:cells.length};
+}
+
+function pct(x){ return Math.round(x*100) + '%'; }
+
+function renderOdds(){
+  var host = document.getElementById('odds');
+  var live = S.phase === 'draw' || S.phase === 'confirm' || S.phase === 'flip';
+  var o = live && S.claim.length ? claimOdds(S.claim, S.turn, true) : null;
+  if (!o){ host.hidden = true; return; }
+  host.hidden = false;
+  document.getElementById('segP').style.flexGrow = o.p;
+  document.getElementById('segR').style.flexGrow = o.rim;
+  document.getElementById('segM').style.flexGrow = o.minus;
+  document.getElementById('oddsRead').innerHTML =
+    '<span class="kp"><b>' + pct(o.p) + '</b> ' + (S.cpu[S.turn] ? 'they take it' : 'you take it') + '</span>' +
+    '<span class="km"><b>' + pct(o.minus) + '</b> ' + (S.cpu[S.turn] ? 'they pay it' : 'you pay it') + '</span>' +
+    '<span class="kr"><b>' + pct(o.rim) + '</b> rim</span>';
+}
+
+function renderHand(){
+  var host = document.getElementById('hand');
+  host.innerHTML = '';
+  if (S.phase === 'over') return;
+  var live = !S.cpu[S.turn] && S.turn === S.seat && (S.phase === 'draw' || S.phase === 'confirm');
+  var hand = S.hands[S.seat];
+  host.style.opacity = live ? '' : '.45';
+  host.style.pointerEvents = live ? '' : 'none';
+  for (var i=0;i<hand.length;i++){
+    (function(id){
+      var def = CARDS[id];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'card-chip';
+      b.style.setProperty('--cc', 'var(--face-' + def.tone + ')');
+      b.setAttribute('aria-pressed', String(live && S.armed === id));
+      b.disabled = !live;
+      b.innerHTML = def.name + '<small>' + def.hint + '</small>';
+      b.addEventListener('click', function(){
+        S.armed = (S.armed === id) ? null : id;
+        if (S.armed) say(def.armed, S.turn);
+        renderHand(); renderOdds();
+      });
+      host.appendChild(b);
+    })(hand[i]);
+  }
+}
+
+function drawCard(p){
+  var id = CARD_IDS[(Math.random()*CARD_IDS.length)|0];
+  S.hands[p].push(id);
+  if (S.hands[p].length > HAND_MAX) S.hands[p].shift();
+  return id;
+}
+
 /* ============ turn flow ============ */
 function alivePlayers(){
   var out = [];
@@ -538,14 +684,41 @@ function refreshAlive(){
   if (left.length <= 1){ S.winner = left[0]; S.phase = 'over'; return true; }
   return false;
 }
+function endGame(byBell){
+  S.phase = 'over';
+  var best = -1, bestN = -1, tied = false, p;
+  for (p=0;p<S.np;p++){
+    var n = countOf(p);
+    if (n > bestN){ bestN = n; best = p; tied = false; }
+    else if (n === bestN && n > 0) tied = true;
+  }
+  S.winner = best;
+  var total = landCount() || 1, share = pct(bestN/total);
+  renderHUD(); renderDock(); draw();
+  if (!byBell){
+    say(best === S.seat ? 'The whole map is yours. Recess is over.'
+                        : nameOf(best) + ' holds the whole map. Rematch?', best);
+  } else if (tied){
+    say('The bell. Dead level at ' + share + ' each — nobody gives the eraser back.', null);
+  } else {
+    say('The bell rings. ' + nameOf(best) + ' ' + verb(best,'hold') + ' ' + share +
+        ' of the map' + (best === S.seat ? ' — recess is yours.' : '.'), best);
+  }
+}
+
 function nextTurn(){
-  if (refreshAlive()){ renderHUD(); renderDock(); draw(); return; }
-  var guard = 0;
+  if (refreshAlive()){ endGame(false); return; }
+  var prev = S.turn, guard = 0;
   do { S.turn = (S.turn + 1) % S.np; } while (!S.alive[S.turn] && guard++ < 10);
+  if (S.turn <= prev){
+    S.round++;
+    if (S.round > ROUNDS){ S.round = ROUNDS; endGame(true); return; }
+  }
   beginTurn();
 }
 function beginTurn(){
   S.claim = []; S.claimSet = {}; S.target = -1; S.capped = false; S.sketch = null;
+  S.armed = null; S.odds = null;
   S.phase = 'draw';
   renderHUD(); renderDock(); draw();
   if (S.cpu[S.turn]) setTimeout(cpuTurn, 900);
@@ -567,132 +740,163 @@ function cpuTurn(){
     if (s > best){ best = s; target = +key; }
   }
   if (target < 0){ nextTurn(); return; }
-  var want = Math.max(3, Math.round(maxClaim(me) * (0.6 + Math.random()*0.4)));
-  var cells = grabNear(target, me, want, null);
-  if (!cells.length){ nextTurn(); return; }
+  // behind, or late in the game, it starts swinging harder
+  var mine = countOf(me), lead = 0;
+  for (i=0;i<S.np;i++) if (S.alive[i] && i !== me) lead = Math.max(lead, countOf(i));
+  var behind = mine < lead;
+  var urgency = (behind ? 0.35 : 0) + (behind && S.round > ROUNDS*0.6 ? 0.4 : 0);
+
+  var cap = maxClaim(me), fracs = [0.2, 0.45, 0.7, 1], pick = null;
+  for (var t=0;t<12;t++){
+    var want = Math.max(2, Math.round(cap * fracs[t % fracs.length]));
+    var cand = grabNear(target, me, want, null);
+    if (!cand.length) continue;
+    var o = claimOdds(cand, me, false);
+    var ev = (o.p + o.rim - o.minus) * cand.length + urgency * cand.length;
+    if (!pick || ev > pick.ev) pick = {cells:cand, ev:ev, o:o};
+  }
+  if (!pick){ nextTurn(); return; }
+
+  var cells = pick.cells;
   S.claim = cells; S.claimSet = {}; S.target = target; S.sketch = cells;
   for (i=0;i<cells.length;i++) S.claimSet[cells[i]] = 1;
+  S.armed = null;
+  var hand = S.hands[me];
+  if (hand.indexOf('judge') >= 0 && pick.o.p < 0.45) S.armed = 'judge';
+  else if (hand.indexOf('shield') >= 0 && cells.length >= 6) S.armed = 'shield';
+  else if (hand.indexOf('double') >= 0 && pick.o.p >= 0.52) S.armed = 'double';
+  else if (hand.indexOf('reflip') >= 0 && cells.length >= 7) S.armed = 'reflip';
   S.phase = 'confirm';
-  say(nameOf(me) + ' squints at the map and marks off ' + tiles(cells.length) + ' of ' + possOf(target) + ' land…', me);
+  say(nameOf(me) + ' squints at the map and marks off ' + tiles(cells.length) + ' of ' + possOf(target) + ' land…' +
+      (S.armed ? ' And puts down a ' + CARDS[S.armed].name + ' card.' : ''), me);
   renderDock(); draw();
   setTimeout(function(){ if (S.phase === 'confirm') doFlip(); }, 1100);
 }
 
 /* ============ the flip ============ */
-function rollFace(){
+function rollFace(o){
   var r = Math.random();
-  if (r < 0.44) return 'plus';
-  if (r < 0.88) return 'minus';
-  return 'rim';
+  if (r < o.p) return 'plus';
+  if (r < o.p + o.rim) return 'rim';
+  return 'minus';
 }
-function doFlip(){
-  if (S.phase !== 'confirm') return;
-  S.phase = 'flip';
-  renderDock();
-  var face = rollFace();
-  var power = face === 'rim' ? POWERS[(Math.random()*POWERS.length)|0] : null;
-  var angle = face === 'plus' ? 0 : face === 'minus' ? 180 : (Math.random() < 0.5 ? 90 : 270);
 
-  var stage = document.getElementById('stage');
+function tumble(face, caption, done){
   var cube = document.getElementById('cube');
   var toss = document.getElementById('toss');
-  var cap = document.getElementById('flipcap');
-  var verdict = document.getElementById('verdict');
-
-  verdict.classList.remove('show');
-  cap.textContent = S.cpu[S.turn] ? nameOf(S.turn) + ' flips the eraser…' : 'in the air…';
-  stage.classList.add('on');
-
+  var angle = face === 'plus' ? 0 : face === 'minus' ? 180 : (Math.random() < 0.5 ? 90 : 270);
+  document.getElementById('flipcap').textContent = caption;
   S.spin += 360 * 4 + ((angle - (S.spin % 360)) + 360) % 360;
   cube.classList.remove('spinning'); toss.classList.remove('tossing');
   void cube.offsetWidth;
   cube.classList.add('spinning'); toss.classList.add('tossing');
   cube.style.transform = 'rotateX(' + S.spin + 'deg) rotateY(' + (-16 + Math.random()*8) + 'deg) rotateZ(' + (Math.random()*7-3.5) + 'deg)';
-
   var wait = window.matchMedia('(prefers-reduced-motion:reduce)').matches ? 400 : 2350;
-  setTimeout(function(){ landed(face, power); }, wait);
+  setTimeout(done, wait);
 }
 
-function landed(face, power){
-  var me = S.turn, target = S.target, cells = S.claim.slice();
-  var title, sub;
+function doFlip(){
+  if (S.phase !== 'confirm') return;
+  var me = S.turn;
+  S.phase = 'flip';
+  renderDock();
+  S.odds = claimOdds(S.claim, me, true);
+  var card = S.armed;
+  var face = rollFace(S.odds);
+
+  document.getElementById('verdict').classList.remove('show');
+  document.getElementById('stage').classList.add('on');
+
+  var opener = S.cpu[me] ? nameOf(me) + ' flips the eraser…' : 'in the air…';
+  tumble(face, opener, function(){
+    if (face === 'minus' && card === 'reflip'){
+      var second = rollFace(S.odds);
+      setTimeout(function(){
+        tumble(second, 'Re-flip — one more throw.', function(){ landed(second, card, me, true); });
+      }, 500);
+      return;
+    }
+    landed(face, card, me, false);
+  });
+}
+
+function landed(face, card, me, reflipped){
+  var cells = S.claim.slice(), n = cells.length;
+  var used = null, title, sub;
+
   if (face === 'plus'){
     title = 'plus';
-    sub = tiles(cells.length) + (cells.length === 1 ? ' changes' : ' change') + ' hands.';
-  } else if (face === 'minus'){
-    title = 'minus';
-    sub = S.shield[me]
-      ? (me === S.seat ? 'Your shield eats it. Nothing moves.' : possOf(me) + ' shield eats it. Nothing moves.')
-      : (nameOf(me) + ' ' + verb(me,'pay') + ' ' + tiles(cells.length) + ' from ' + possOf(me) + ' own side.');
+    if (card === 'double'){ used = 'double'; sub = 'Double — ' + tiles(n*2) + ' change hands.'; }
+    else sub = tiles(n) + (n === 1 ? ' changes' : ' change') + ' hands.';
+  } else if (face === 'rim'){
+    title = 'rim';
+    if (card === 'double'){ used = 'double'; sub = 'Double on the rim — ' + tiles(n*2) + ', and a card.'; }
+    else sub = tiles(n) + ' taken, and a card off the rim.';
+  } else if (card === 'shield'){
+    title = 'blocked';
+    used = 'shield';
+    sub = 'The shield eats it. Nothing moves.';
   } else {
-    title = power.name;
-    sub = 'The rim! — ' + power.line + '.';
+    title = 'minus';
+    used = (card === 'reflip' && reflipped) ? 'reflip' : null;
+    sub = nameOf(me) + ' ' + verb(me,'pay') + ' ' + tiles(n) + ' from ' + possOf(me) + ' own side.';
   }
-  var ink = isDark() ? ['#F0705F','#6C9CF2','#E8BB56'] : ['#C6392E','#2A5FC4','#A87C1F'];
-  var shade = face === 'plus' ? ink[0] : face === 'minus' ? ink[1] : ink[2];
+  if (card === 'judge') used = 'judge';
+  if (card === 'reflip' && reflipped) used = 'reflip';
+
+  var ink = isDark() ? {plus:'#F0705F', minus:'#6C9CF2', rim:'#E8BB56'} : {plus:'#C6392E', minus:'#2A5FC4', rim:'#A87C1F'};
+  var shade = (face === 'plus') ? ink.plus : (face === 'rim' || title === 'blocked') ? ink.rim : ink.minus;
   var vt = document.getElementById('verdictTitle');
   vt.textContent = title;
   vt.style.color = shade; vt.style.borderColor = shade;
   document.getElementById('verdictSub').textContent = sub;
   document.getElementById('flipcap').textContent = '';
   document.getElementById('verdict').classList.add('show');
-  if (navigator.vibrate) { try { navigator.vibrate(face === 'minus' ? [30,60,30] : 45); } catch(e){} }
+  if (navigator.vibrate){ try { navigator.vibrate(face === 'minus' && title !== 'blocked' ? [30,60,30] : 45); } catch(e){} }
 
   setTimeout(function(){
     document.getElementById('stage').classList.remove('on');
-    resolve(face, power, me, target, cells);
+    resolve(face, title === 'blocked', used, me, S.target, cells);
   }, 1150);
 }
 
-function resolve(face, power, me, target, cells){
-  var i, gained = [], lost = [];
-  if (face === 'plus'){
+function resolve(face, blocked, used, me, target, cells){
+  var i, gained = [], lost = [], drew = null;
+
+  if (used){                                  // a card only leaves your hand when it works
+    var h = S.hands[me], at = h.indexOf(used);
+    if (at >= 0) h.splice(at, 1);
+  }
+  S.armed = null;
+
+  if (face === 'plus' || face === 'rim'){
     for (i=0;i<cells.length;i++){ S.owner[cells[i]] = me; gained.push(cells[i]); }
-    say('Red side up. ' + nameOf(me) + ' ' + verb(me,'take') + ' ' + tiles(cells.length) + ' off ' + objOf(target) + '.', me);
-  } else if (face === 'minus'){
-    if (S.shield[me]){
-      S.shield[me] = false;
-      say('Blue side up — but ' + possOf(me) + ' shield holds. The border stays put.', me);
-    } else {
-      var give = grabNear(me, target, cells.length, null);
-      for (i=0;i<give.length;i++){ S.owner[give[i]] = target; lost.push(give[i]); }
-      say('Blue side up. ' + nameOf(me) + ' ' + verb(me,'hand') + ' ' + tiles(give.length) + ' to ' + objOf(target) + '.', target);
-    }
-  } else {
-    for (i=0;i<cells.length;i++){ S.owner[cells[i]] = me; gained.push(cells[i]); }
-    if (power.id === 'double'){
+    if (used === 'double'){
       var extra = grabNear(target, me, cells.length, null);
       for (i=0;i<extra.length;i++){ S.owner[extra[i]] = me; gained.push(extra[i]); }
-      say('On the rim — double! ' + nameOf(me) + ' ' + verb(me,'walk') + ' off with ' + tiles(gained.length) + '.', me);
-    } else if (power.id === 'shield'){
-      S.shield[me] = true;
-      say('On the rim — shield. ' + tiles(cells.length) + ' taken, and the next minus against ' + objOf(me) + ' is void.', me);
-    } else {
-      var ring = {}, own = {};
-      for (i=0;i<gained.length;i++) own[gained[i]] = 1;
-      for (i=0;i<gained.length;i++){
-        var ns = nbrs(gained[i]);
-        for (var k=0;k<ns.length;k++){
-          var o = S.owner[ns[k]];
-          if (o !== SEA && o !== me && !own[ns[k]]) ring[ns[k]] = 1;
-        }
-      }
-      for (var key in ring){ S.owner[+key] = me; gained.push(+key); }
-      say('On the rim — spill! The bite bleeds outward: ' + tiles(gained.length) + '.', me);
     }
+    if (face === 'rim') drew = drawCard(me);
+    var line = (face === 'rim' ? 'On the rim! ' : 'Red side up. ') +
+      nameOf(me) + ' ' + verb(me,'take') + ' ' + tiles(gained.length) + ' off ' + objOf(target) + '.';
+    if (used === 'double') line += ' The Double paid.';
+    if (drew) line += ' ' + (me === S.seat ? 'You pocket a ' : nameOf(me) + ' pockets a ') + CARDS[drew].name + ' card.';
+    say(line, me);
+  } else if (blocked){
+    say('Blue side up — but ' + possOf(me) + ' Shield eats it. The border stays put.', me);
+  } else {
+    // you pay from the ground you attacked across, not from somewhere safe
+    var give = grabNear(me, target, cells.length, null, cells);
+    for (i=0;i<give.length;i++){ S.owner[give[i]] = target; lost.push(give[i]); }
+    say('Blue side up. ' + nameOf(me) + ' ' + verb(me,'hand') + ' ' + tiles(give.length) + ' to ' + objOf(target) +
+        ', right where ' + (me === S.seat ? 'you pushed' : 'it pushed') + '.', target);
   }
 
-  S.fx = {cells: gained.concat(lost), color: face === 'minus' && !lost.length ? me : (lost.length ? target : me), until: performance.now() + 900};
-  S.claim = []; S.claimSet = {}; S.sketch = null;
-  renderHUD(); draw();
+  S.fx = {cells: gained.concat(lost), until: performance.now() + 900};
+  S.claim = []; S.claimSet = {}; S.sketch = null; S.capped = false;
+  renderHUD(); renderOdds(); draw();
 
   setTimeout(function(){
-    if (refreshAlive()){
-      renderHUD(); renderDock(); draw();
-      var w = S.winner;
-      say(w === S.seat ? 'The whole map is yours. Recess is over.' : nameOf(w) + ' holds the whole map. Rematch?', w);
-      return;
-    }
+    if (refreshAlive()){ endGame(false); return; }
     nextTurn();
   }, 1400);
 }
@@ -709,8 +913,9 @@ function fit(){
   var board = document.querySelector('.board');
   var r = board.getBoundingClientRect();
   var bw = Math.max(r.width || 0, 240);
-  var bh = Math.max(r.height || 0, 240);   // a collapsed flex row must not erase the map
-  cell = Math.max(6, Math.floor(Math.min(bw / COLS, bh / ROWS)));
+  // a genuinely short board (landscape) is fine; a collapsed one (0px) is not
+  var bh = r.height > 80 ? r.height : Math.max(240, (window.innerHeight || 600) * 0.5);
+  cell = Math.max(4, Math.floor(Math.min(bw / COLS, bh / ROWS)));
   dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   var w = cell * COLS, h = cell * ROWS;
   canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
@@ -883,11 +1088,20 @@ function renderHUD(){
     var el = document.createElement('div');
     el.className = 'score' + (p === S.turn && S.phase !== 'over' ? ' on' : '') + (S.alive[p] ? '' : ' out');
     el.style.setProperty('--c', col(p));
-    var pct = Math.round(countOf(p) / total * 100);
-    el.innerHTML = '<span class="who">' + nameOf(p) + (S.shield[p] ? ' <span class="sh">◇</span>' : '') +
-                   '</span><span class="pct">' + (S.alive[p] ? pct + '%' : '—') + '</span>';
+    var share = Math.round(countOf(p) / total * 100);
+    var held = S.hands[p].length;
+    el.innerHTML = '<span class="who">' + nameOf(p) +
+                   (held ? '<span class="cards-n" title="cards held">' + held + '</span>' : '') +
+                   '</span><span class="pct">' + (S.alive[p] ? share + '%' : '—') + '</span>';
     host.appendChild(el);
   }
+  var left = ROUNDS - S.round;
+  var r = document.createElement('div');
+  r.className = 'round' + (left <= 2 ? ' warn' : '');
+  r.innerHTML = S.phase === 'over'
+    ? '<b>bell</b>'
+    : 'round <b>' + S.round + '</b>/' + ROUNDS;
+  host.appendChild(r);
 }
 
 function say(text, p){
@@ -917,6 +1131,7 @@ function pill(text, p){
 function renderDock(){
   var host = document.getElementById('actions');
   host.innerHTML = '';
+  renderOdds(); renderHand();
   if (S.phase === 'over'){
     host.appendChild(btn('New map', function(){ openNew(); }));
     return;
@@ -956,9 +1171,9 @@ function cellAtPx(clientX, clientY){
 
 function claimLine(me){
   var n = S.claim.length;
-  return 'Claiming ' + tiles(n) + ' off ' + objOf(S.target) + '. ' +
-         (S.capped ? 'That is your ' + maxClaim(me) + '-tile limit — nobody believed a bigger bite. ' : '') +
-         'Blue side and you hand back ' + n + '.';
+  return 'Claiming ' + tiles(n) + ' off ' + objOf(S.target) + '.' +
+         (S.capped ? ' That is your ' + maxClaim(me) + '-tile limit.' : '') +
+         (n > 2 ? ' A minus hands back the same ' + n + '.' : '');
 }
 
 function addCell(c, me){
@@ -969,6 +1184,7 @@ function addCell(c, me){
   if (!joined && !touchesOwner(c, me)) return;      // the bite stays one piece
   S.claim.push(c); S.claimSet[c] = 1;
   say(claimLine(me), me);
+  renderOdds();
   draw();
 }
 
@@ -981,6 +1197,7 @@ function strokeStart(clientX, clientY){
   if (o === SEA){ say('That is open water. Start on a rival tile that touches your border.', me); draw(); return false; }
   if (!touchesOwner(c, me)){ say('Too deep — start where ' + nameOf(o) + ' meets your own border.', o); draw(); return false; }
   S.target = o; S.claim = []; S.claimSet = {}; S.capped = false;
+  renderOdds();
   brush.on = true;
   var r = canvas.getBoundingClientRect();
   brush.px = (clientX - r.left)/cell; brush.py = (clientY - r.top)/cell;
