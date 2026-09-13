@@ -34,6 +34,7 @@ belief   = 0.38 + 0.30 * min(reach/0.45, 1)     reach
                 - min(14, 3.5 * hill tiles)/100  hills
                 - min(18, 6 * river crossings)/100
                 - 0.12 if the bite contains a rival capital
+                + min(12, 4 * tiles next to a rival capital)/100
                 + 0.15 if the Judge card is armed        (clamped 0.15–0.75)
 
 rim      = min(0.22, 0.09 + 0.009 * flips so far)   the eraser wearing down
@@ -56,8 +57,28 @@ the map without taking ground out of play; reaching across it to take land
 costs you. **Fords** are two marked crossings where the river costs nothing,
 and in the rain they are the only way over at all, which makes them the one
 piece of ground both players want. **Capitals** are a flag on a real tile:
-defended, but taking one breaks the line and a further 30% of that player's
-land goes with it, after which they plant a new flag in whatever is left.
+the ground immediately around it is loose, because the crowd is all inside
+the walls, so the outskirts come away easily and the flag tile itself is the
+hard part. Taking it breaks the line and a further 30% of that player's land
+goes with it, after which they plant a new flag in whatever is left. The soft
+ring makes a capital a magnet: easy to approach, expensive to finish.
+
+## Playing together
+
+Any seat can be a person or the CPU: **New map** lists the players and each
+one toggles between the two, so two people share one phone, or three people
+and one CPU, up to four seats. With more than one person playing, nobody is
+"you" any more and every message uses colour names.
+
+Between turns a handover screen covers the board with whose turn it is, the
+standings and the round, and the hand is emptied from the DOM until that
+player taps Ready, so nobody reads anyone else's cards over their shoulder.
+
+For play across two devices, a turn is fully described by
+`{player, claimCells, armedCard}` plus the face the eraser landed on, and the
+whole map comes out of `Math.random()` at setup. A server that owns the seed
+and the flip result and relays that triple is the entire protocol; nothing
+else in the game needs to change.
 
 ## The seasons
 

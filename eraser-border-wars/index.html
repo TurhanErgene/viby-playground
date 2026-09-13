@@ -271,6 +271,26 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 }
 .verdict p{margin:10px 0 0; font-family:"Patrick Hand",cursive; font-size:18px; color:var(--ink)}
 
+/* ---------- handover ---------- */
+.pass{position:fixed; inset:0; z-index:60; display:none; place-items:center; background:var(--paper)}
+.pass.on{display:grid}
+.passcard{display:flex; flex-direction:column; align-items:center; gap:14px; padding:0 24px; text-align:center}
+.passflag{width:78px; height:78px; border-radius:6px; background:var(--pc,var(--ink)); box-shadow:inset 0 0 0 2px rgba(0,0,0,.16)}
+.passwho{font:700 30px/1 "Familjen Grotesk",sans-serif; letter-spacing:-.01em; color:var(--pc,var(--ink))}
+.passline{margin:0; font-family:"Patrick Hand",cursive; font-size:18px; color:var(--ink-soft); max-width:22em}
+.pass .act{min-width:210px; flex:0 0 auto; margin-top:6px}
+.pstats{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-top:2px}
+.pstat{
+  display:flex; align-items:baseline; gap:6px; padding:6px 10px; border-radius:3px;
+  background:var(--panel); border:1px solid var(--edge); border-left:4px solid var(--c);
+  font:600 12px/1.1 "Familjen Grotesk",sans-serif; color:var(--ink);
+}
+.pstat b{font:700 13px/1 Karla,sans-serif; color:var(--c); font-variant-numeric:tabular-nums}
+.pround{
+  margin:0; font:500 11px/1 "Familjen Grotesk",sans-serif; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-soft);
+}
+
 /* ---------- sheets ---------- */
 .sheet{
   position:fixed; inset:0; z-index:50; display:none; align-items:flex-end; justify-content:center;
@@ -294,6 +314,9 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
   border:1.5px solid var(--edge); background:transparent; color:var(--ink);
 }
 .opt[aria-pressed="true"]{border-color:var(--ink); background:var(--ink); color:var(--paper)}
+.opt.seat{display:flex; flex-direction:column; align-items:flex-start; gap:3px; min-width:88px}
+.opt.seat small{font:400 10px/1 Karla,sans-serif; letter-spacing:.08em; text-transform:uppercase; opacity:.7}
+.seatnote{margin:-6px 0 14px; font-family:"Patrick Hand",cursive; font-size:14px; color:var(--ink-soft)}
 .lab{font:500 11px/1 "Familjen Grotesk",sans-serif; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); display:block; margin:0 0 8px}
 @media (prefers-reduced-motion:reduce){
   .spinning{transition-duration:.35s}
@@ -346,6 +369,17 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
   <div class="verdict" id="verdict"><h2 id="verdictTitle"></h2><p id="verdictSub"></p></div>
 </div>
 
+<div class="pass" id="pass">
+  <div class="passcard">
+    <div class="passflag" id="passFlag"></div>
+    <span class="passwho" id="passWho">Blue</span>
+    <p class="passline" id="passLine">Hand the eraser over.</p>
+    <div class="pstats" id="passStats"></div>
+    <p class="pround" id="passRound"></p>
+    <button class="act" id="passGo" type="button">Ready</button>
+  </div>
+</div>
+
 <div class="sheet" id="sheetRules">
   <div class="card">
     <h3>How the schoolyard played it</h3>
@@ -359,7 +393,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
     <div class="rule"><span class="k">△</span><p><b>Hills.</b> Rising ground is hard to argue your way onto. Every hill tile in your bite costs you believability.</p></div>
     <div class="rule"><span class="k">≈</span><p><b>The river.</b> It runs along the tile edges, not through them. Reaching across it to take ground costs you more than walking around, except at the two <b>fords</b>, marked with planks. In the rain the fords are the only way over at all.</p></div>
     <div class="rule"><span class="k">☁</span><p><b>The seasons.</b> Recess runs through a year. Spring brings rain, summer a dry spell that lets you walk the riverbed, autumn a wind that doubles the rim, winter a fog that hides the odds until the eraser lands. Each round announces itself.</p></div>
-    <div class="rule"><span class="k">⚑</span><p><b>Capitals.</b> Each flag sits on a real tile. It is defended, but take it and the line around it breaks: a further <b>30%</b> of that player's land comes with it, and they plant a new flag in whatever is left.</p></div>
+    <div class="rule"><span class="k">⚑</span><p><b>Capitals.</b> Each flag sits on a real tile. The ground immediately around it is loose, because the crowd is all inside the walls, so the outskirts come away easily. The flag tile itself is the hard part, and taking it breaks the line: a further <b>30%</b> of that player's land comes with it, and they plant a new flag in whatever is left.</p></div>
     <div class="rule"><span class="k">◌</span><p><b>Old ground shows.</b> Tiles that have changed hands keep a smudge of whoever held them before, so by the last rounds you can see where the fighting was.</p></div>
     <div class="rule"><span class="k">◍</span><p><b>The eraser wears.</b> Every throw rounds the corners a little more, so the rim comes up more often as recess goes on. Late flips are luckier than early ones.</p></div>
     <div class="actions" style="margin-top:16px"><button class="act" id="closeRules" type="button">Back to the map</button></div>
@@ -372,8 +406,9 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
     <p class="lede">Fresh country, fresh borders. Everyone starts with an even share.</p>
     <span class="lab">Players</span>
     <div class="opts" id="optPlayers"></div>
-    <span class="lab">You play as</span>
+    <span class="lab">Who is playing</span>
     <div class="opts" id="optSeat"></div>
+    <p class="seatnote" id="seatNote"></p>
     <div class="actions">
       <button class="act ghost" id="cancelNew" type="button">Cancel</button>
       <button class="act" id="startNew" type="button">Draw the map</button>
@@ -530,6 +565,7 @@ var S = {
   phase:'draw',            // draw | confirm | flip | over
   claim:[], claimSet:{}, target:-1, capped:false,
   round:1, hands:[[],[],[],[]], armed:null, odds:null, justDrew:-1, alive:[],
+  solo:0, hotseat:false, cpuSetup:[false,true,true,true],
   hills:null, river:null, fords:null, capitals:[], wear:0, lastHit:[-1,-1,-1,-1],
   view:{x0:0, y0:0, w:COLS, h:ROWS},
   ghost:null, churn:null, weather:'clear', season:0,
@@ -851,8 +887,11 @@ function setView(){
   S.view = {x0:x0, y0:y0, w:x1 - x0 + 1, h:y1 - y0 + 1};
 }
 
-function newGame(np, seat){
-  S.np = np; S.seat = seat;
+function newGame(np, cpuFlags){
+  S.np = np;
+  S.cpuSetup = cpuFlags.slice(0, np);
+  S.seat = 0;
+  for (var sf=0; sf<np; sf++) if (!S.cpuSetup[sf]){ S.seat = sf; break; }
   var seeds = [];
   S.owner = partition(makeLand(), np, seeds);
   S.capitals = seeds.slice(0, np);
@@ -867,7 +906,11 @@ function newGame(np, seat){
   S.jitter = new Float32Array(COLS*ROWS);
   for (var i=0;i<S.jitter.length;i++) S.jitter[i] = 0.82 + Math.random()*0.18;
   S.cpu = [];
-  for (var p=0;p<np;p++) S.cpu.push(p !== seat);
+  for (var p=0;p<np;p++) S.cpu.push(!!S.cpuSetup[p]);
+  var people = 0, only = -1;
+  for (p=0;p<np;p++) if (!S.cpu[p]){ people++; only = p; }
+  S.solo = people === 1 ? only : -1;      // with two people at the table, nobody is "you"
+  S.hotseat = people > 1;
   S.alive = []; for (p=0;p<np;p++) S.alive.push(true);
   S.hands = [[],[],[],[]]; S.armed = null; S.odds = null; S.round = 1;
   S.turn = 0; S.claim = []; S.claimSet = {}; S.target = -1; S.capped = false; S.sketch = null;
@@ -948,12 +991,21 @@ function capitalOwner(c){
 
 function claimOdds(cells, me, withCard){
   if (!cells || !cells.length) return null;
-  var set = {}, i, k, shared = 0, per = 0, crossings = 0, hills = 0, caps = 0;
+  var set = {}, i, k, shared = 0, per = 0, crossings = 0, hills = 0, caps = 0, outskirts = 0;
   for (i=0;i<cells.length;i++) set[cells[i]] = 1;
   for (i=0;i<cells.length;i++){
     var c = cells[i], x = xOf(c), y = yOf(c);
     if (S.hills[c]) hills++;
-    if (capitalOwner(c) >= 0 && capitalOwner(c) !== me) caps++;
+    var own = capitalOwner(c);
+    if (own >= 0 && own !== me) caps++;
+    else {
+      // the crowd is all inside the capital, so the ground around it is loose
+      var ring = nbrs(c);
+      for (k=0;k<ring.length;k++){
+        var ro = capitalOwner(ring[k]);
+        if (ro >= 0 && ro !== me){ outskirts++; break; }
+      }
+    }
     var sides = [x > 0 ? c-1 : -1, x < COLS-1 ? c+1 : -1, y > 0 ? c-COLS : -1, y < ROWS-1 ? c+COLS : -1];
     for (k=0;k<4;k++){
       var nb = sides[k];
@@ -977,13 +1029,14 @@ function claimOdds(cells, me, withCard){
   mod('hills',  -Math.min(14, hills * 3.5));
   mod('river',  -Math.min(18, crossings * 6));
   mod('capital', caps ? -12 : 0);
+  mod('outskirts', Math.min(12, 4 * outskirts));
   if (withCard && S.armed === 'judge') mod('judge', 15);
 
   var belief = Math.max(0.15, Math.min(0.75, 0.38 + total/100));
   var rim = Math.min(0.40, rimNow() * (S.weather === 'wind' ? 2 : 1));
   var pl = belief * (1 - rim);                  // the rim takes from both faces
   return {p:pl, rim:rim, minus:Math.max(0, 1 - pl - rim), mods:mods, belief:belief,
-          n:cells.length, hills:hills, crossings:crossings, caps:caps};
+          n:cells.length, hills:hills, crossings:crossings, caps:caps, outskirts:outskirts};
 }
 
 function pct(x){ return Math.round(x*100) + '%'; }
@@ -1022,14 +1075,15 @@ function renderOdds(){
 
 function renderHand(){
   var host = document.getElementById('hand');
+  if (S.phase === 'pass'){ host.innerHTML = ''; return; }   // don't show a hand to the wrong pair of eyes
   if (S.phase === 'flip'){            // leave the played card mid-animation
     host.style.opacity = '.5'; host.style.pointerEvents = 'none';
     return;
   }
   host.innerHTML = '';
   if (S.phase === 'over') return;
-  var live = !S.cpu[S.turn] && S.turn === S.seat && (S.phase === 'draw' || S.phase === 'confirm');
-  var hand = S.hands[S.seat], n = hand.length;
+  var live = !S.cpu[S.turn] && (S.phase === 'draw' || S.phase === 'confirm');
+  var hand = S.hands[S.turn], n = hand.length;
   var armedAt = live ? hand.indexOf(S.armed) : -1;
   host.style.opacity = live ? '' : '.5';
   host.style.pointerEvents = live ? '' : 'none';
@@ -1067,7 +1121,7 @@ function drawCard(p){
   var id = CARD_IDS[(Math.random()*CARD_IDS.length)|0];
   S.hands[p].push(id);
   if (S.hands[p].length > HAND_MAX) S.hands[p].shift();
-  if (p === S.seat) S.justDrew = S.hands[p].length - 1;
+  if (!S.cpu[p]) S.justDrew = S.hands[p].length - 1;
   return id;
 }
 
@@ -1143,13 +1197,13 @@ function endGame(byBell){
   renderHUD(); renderDock(); draw();
   if (byBell) sfx.bell();
   if (!byBell){
-    say(best === S.seat ? 'The whole map is yours. Recess is over.'
+    say(best === S.solo ? 'The whole map is yours. Recess is over.'
                         : nameOf(best) + ' holds the whole map. Rematch?', best);
   } else if (tied){
     say('The bell. Dead level at ' + share + ' each — nobody gives the eraser back.', null);
   } else {
     say('The bell rings. ' + nameOf(best) + ' ' + verb(best,'hold') + ' ' + share +
-        ' of the map' + (best === S.seat ? ' — recess is yours.' : '.'), best);
+        ' of the map' + (best === S.solo ? ', and recess is yours.' : '.'), best);
   }
 }
 
@@ -1185,9 +1239,34 @@ function showWeather(){
 function beginTurn(){
   S.claim = []; S.claimSet = {}; S.target = -1; S.capped = false; S.sketch = null;
   S.armed = null; S.odds = null;
+  if (!S.cpu[S.turn] && S.hotseat){        // two people, one phone: hide the hand in between
+    S.phase = 'pass';
+    renderHUD(); renderDock(); draw();
+    showPass();
+    return;
+  }
   S.phase = 'draw';
   renderHUD(); renderDock(); draw();
   if (S.cpu[S.turn]) setTimeout(cpuTurn, 900);
+}
+
+function showPass(){
+  var el = document.getElementById('pass');
+  el.style.setProperty('--pc', col(S.turn));
+  document.getElementById('passWho').textContent = NAMES[S.turn] + '\u2019s turn';
+  document.getElementById('passLine').textContent = S.round === 1 && S.turn === 0
+    ? 'You start. Nobody else looks at your cards.'
+    : 'Hand the phone over. Cards stay hidden until you tap.';
+  var total = landCount() || 1, bits = [], p;
+  for (p=0;p<S.np;p++){
+    if (!S.alive[p]) continue;
+    bits.push('<span class="pstat" style="--c:' + col(p) + '">' + NAMES[p] +
+              '<b>' + Math.round(countOf(p)/total*100) + '%</b></span>');
+  }
+  document.getElementById('passStats').innerHTML = bits.join('');
+  document.getElementById('passRound').textContent =
+    'Round ' + S.round + ' of ' + ROUNDS + '  \u00b7  ' + WEATHER[S.weather].tag;
+  el.classList.add('on');
 }
 
 function cpuTurn(){
@@ -1370,7 +1449,7 @@ function resolve(face, blocked, used, me, target, cells){
     if (used === 'double') line += ' The Double paid.';
     if (fallen) line = 'The capital falls. ' + possOf(target) + ' line breaks and ' +
       tiles(gained.length) + ' go with it.';
-    if (drew) line += ' ' + (me === S.seat ? 'You pocket a ' : nameOf(me) + ' pockets a ') + CARDS[drew].name + ' card.';
+    if (drew) line += ' ' + (me === S.solo ? 'You pocket a ' : nameOf(me) + ' pockets a ') + CARDS[drew].name + ' card.';
     say(line, me);
     if (fallen) sfx.rout(); else sfx.take();
   } else if (blocked){
@@ -1384,7 +1463,7 @@ function resolve(face, blocked, used, me, target, cells){
     if (backFall){ for (i=0;i<backFall.length;i++) lost.push(backFall[i]); }
     sfx.lose();
     say('Blue side up. ' + nameOf(me) + ' ' + verb(me,'hand') + ' ' + tiles(give.length) + ' to ' + objOf(target) +
-        ', right where ' + (me === S.seat ? 'you pushed' : 'it pushed') + '.', target);
+        ', right where ' + (me === S.solo ? 'you pushed' : possOf(me) + ' push went in') + '.', target);
   }
 
   var routs = routCheck(), pause = 1400;
@@ -1679,10 +1758,10 @@ function tick(){
 }
 
 /* ============ HUD + dock ============ */
-function nameOf(p){ return p === S.seat ? 'You' : NAMES[p]; }
-function objOf(p){ return p === S.seat ? 'you' : NAMES[p]; }
-function possOf(p){ return p === S.seat ? 'your' : NAMES[p] + '\u2019s'; }
-function verb(p, stem){ return p === S.seat ? stem : stem + 's'; }
+function nameOf(p){ return p === S.solo ? 'You' : NAMES[p]; }
+function objOf(p){ return p === S.solo ? 'you' : NAMES[p]; }
+function possOf(p){ return p === S.solo ? 'your' : NAMES[p] + '\u2019s'; }
+function verb(p, stem){ return p === S.solo ? stem : stem + 's'; }
 function tiles(n){ return n + (n === 1 ? ' tile' : ' tiles'); }
 
 function renderHUD(){
@@ -1748,7 +1827,8 @@ function renderDock(){
     return;
   }
   if (S.phase === 'draw'){
-    if (!S.claim.length) say('Your turn. Start on a rival tile touching your border and drag. Up to ' + maxClaim(S.turn) + ' tiles.', S.turn);
+    if (!S.claim.length) say((S.hotseat ? NAMES[S.turn] + ', your turn. ' : 'Your turn. ') +
+      'Start on a rival tile touching your border and drag. Up to ' + maxClaim(S.turn) + ' tiles.', S.turn);
     host.appendChild(btn('Skip turn', function(){ say('You wave it off.', S.turn); nextTurn(); }, true));
     host.appendChild(pill('drag across the map', S.turn));
     return;
@@ -1865,7 +1945,7 @@ window.addEventListener('mousemove', function(e){ strokeMove(e.clientX, e.client
 window.addEventListener('mouseup', strokeEnd);
 
 /* ============ sheets ============ */
-var pendingPlayers = 2, pendingSeat = 0;
+var pendingPlayers = 2, pendingCpu = [false, true, true, true];
 function sheet(id, on){ document.getElementById(id).classList.toggle('on', on); }
 
 function buildNewSheet(){
@@ -1877,7 +1957,9 @@ function buildNewSheet(){
     b.setAttribute('aria-pressed', String(n === pendingPlayers));
     b.addEventListener('click', function(){
       pendingPlayers = n;
-      if (pendingSeat >= n) pendingSeat = 0;
+      var people = 0;
+      for (var q=0;q<n;q++) if (!pendingCpu[q]) people++;
+      if (!people) pendingCpu[0] = false;
       buildNewSheet();
     });
     pl.appendChild(b);
@@ -1887,15 +1969,33 @@ function buildNewSheet(){
   for (var p=0;p<pendingPlayers;p++){
     (function(p){
       var b = document.createElement('button');
-      b.type = 'button'; b.className = 'opt'; b.textContent = NAMES[p];
+      b.type = 'button'; b.className = 'opt seat';
+      b.innerHTML = NAMES[p] + '<small>' + (pendingCpu[p] ? 'CPU' : 'person') + '</small>';
       b.style.borderLeft = '5px solid ' + col(p);
-      b.setAttribute('aria-pressed', String(p === pendingSeat));
-      b.addEventListener('click', function(){ pendingSeat = p; buildNewSheet(); });
+      b.setAttribute('aria-pressed', String(!pendingCpu[p]));
+      b.addEventListener('click', function(){
+        var people = 0, q;
+        for (q=0;q<pendingPlayers;q++) if (!pendingCpu[q]) people++;
+        if (!pendingCpu[p] && people < 2) return;      // somebody has to be holding the phone
+        pendingCpu[p] = !pendingCpu[p];
+        buildNewSheet();
+      });
       st.appendChild(b);
     })(p);
   }
+  var people2 = 0;
+  for (var q2=0;q2<pendingPlayers;q2++) if (!pendingCpu[q2]) people2++;
+  document.getElementById('seatNote').textContent = people2 > 1
+    ? 'Share one phone: it tells you when to hand it over, and hides your cards in between.'
+    : 'Tap a colour to hand that seat to a friend instead of the CPU.';
 }
-function openNew(){ pendingPlayers = S.np; pendingSeat = S.seat; buildNewSheet(); sheet('sheetNew', true); }
+function openNew(){
+  pendingPlayers = S.np;
+  pendingCpu = S.cpuSetup.slice();
+  while (pendingCpu.length < 4) pendingCpu.push(true);
+  buildNewSheet();
+  sheet('sheetNew', true);
+}
 
 var sndBtn = document.getElementById('btnSound');
 function syncSound(){
@@ -1909,13 +2009,21 @@ document.addEventListener('pointerdown', function once(){       // browsers need
   document.removeEventListener('pointerdown', once);
 });
 
+document.getElementById('passGo').addEventListener('click', function(){
+  document.getElementById('pass').classList.remove('on');
+  if (S.phase !== 'pass') return;
+  S.phase = 'draw';
+  sfx.mark();
+  renderHUD(); renderDock(); draw();
+});
+
 document.getElementById('btnRules').addEventListener('click', function(){ sheet('sheetRules', true); });
 document.getElementById('closeRules').addEventListener('click', function(){ sheet('sheetRules', false); });
 document.getElementById('btnNew').addEventListener('click', openNew);
 document.getElementById('cancelNew').addEventListener('click', function(){ sheet('sheetNew', false); });
 document.getElementById('startNew').addEventListener('click', function(){
   sheet('sheetNew', false);
-  newGame(pendingPlayers, pendingSeat);
+  newGame(pendingPlayers, pendingCpu);
 });
 [['sheetRules'],['sheetNew']].forEach(function(pair){
   var el = document.getElementById(pair[0]);
@@ -1936,7 +2044,7 @@ if (window.ResizeObserver){
 
 readTheme();
 sizeApp();
-newGame(2, 0);
+newGame(2, [false, true, true, true]);
 tick();
 })();
 </script>
