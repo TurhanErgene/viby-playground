@@ -16,7 +16,9 @@ one file, ~1100 lines, plain ES5-style JS in one IIFE.
 3. **Arm a card** (optional) from the hand at the bottom.
 4. **Flip.** Red `+` takes the land, blue `-` hands the same number of tiles
    back, taken from the ground right behind your push. The narrow rim gives
-   you the land *and* a card.
+   you the land *and* a card. A short end changes the bet instead of settling
+   it: `×2` doubles the bite, `÷2` halves it, and the eraser goes straight
+   back up to settle the new one against freshly recalculated odds.
 
 The bell ends recess after 12 rounds; the largest share wins. Squeezed under
 8% of the map and you hand the rest to whoever pushed you there, so endgames
@@ -107,10 +109,17 @@ rounds the map shows where the fighting was.
 
 ## The eraser wears out
 
-Every throw rounds the corners a little more. The rim starts at 9% and
-creeps toward 22%, and the eraser on screen visibly loses its edges as it
-goes, so late flips are luckier and stranger than early ones. The rim eats
-into both faces, not just the minus.
+Every throw rounds the corners a little more. The rim starts at 9% and creeps
+toward 22%, the short ends from 2% to 8%, and the eraser on screen visibly
+loses its edges as it goes, so late flips are luckier and stranger than early
+ones. Both rare faces eat into the plus and the minus alike rather than only
+the minus.
+
+The rounded corners would otherwise let you see straight through the box, so
+the eraser has a solid core: a second six-face block scaled just inside the
+shell, square-cornered and the colour of bare rubber. It only shows where the
+outer faces have worn away, which is exactly what a chewed eraser looks
+like.
 
 ## Sound
 

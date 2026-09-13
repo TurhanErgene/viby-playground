@@ -150,6 +150,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 .oddsbar .sp{background:var(--face-plus)}
 .oddsbar .sr{background:var(--face-rim)}
 .oddsbar .sm{background:var(--face-minus)}
+.oddsbar .se{background:linear-gradient(180deg, var(--face-plus), var(--face-minus))}
 .oddsbar.fogged span{background:repeating-linear-gradient(45deg, var(--edge) 0 3px, transparent 3px 6px)}
 .oddsread{
   display:flex; gap:11px; min-height:11px; font:500 11.5px/1 Karla,sans-serif; color:var(--ink-soft);
@@ -162,6 +163,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 .oddsread .kp b{color:var(--face-plus)}
 .oddsread .km b{color:var(--face-minus)}
 .oddsread .kr b{color:var(--face-rim)}
+.oddsread .ke b{color:var(--ink)}
 .hand{
   display:flex; justify-content:center; align-items:flex-end;
   height:120px; padding-top:24px; transition:opacity .2s;
@@ -242,7 +244,19 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 }
 .f-top{transform:translate(-50%,-50%) rotateX(90deg) translateZ(52px)}
 .f-bottom{transform:translate(-50%,-50%) rotateX(-90deg) translateZ(52px)}
-.f-left,.f-right{width:46px; height:104px; background:linear-gradient(#C6392E 0 50%,#2A5FC4 50% 100%)}
+.f-left,.f-right{
+  width:46px; height:104px; border-radius:var(--chip,5px);
+  background:linear-gradient(#C6392E 0 33%, #E4D9C2 33% 67%, #2A5FC4 67% 100%);
+  font-size:20px; letter-spacing:.01em; color:#5B4A2A;
+}
+.core{
+  position:absolute; left:50%; top:50%; width:0; height:0;
+  transform-style:preserve-3d; transform:scale3d(.96,.93,.86);
+}
+.core .face{
+  background:#CFC4B6; background-image:none; border-radius:2px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.1); color:transparent;
+}
 .f-left{transform:translate(-50%,-50%) rotateY(-90deg) translateZ(100px)}
 .f-right{transform:translate(-50%,-50%) rotateY(90deg) translateZ(100px)}
 .spinning{transition:transform 2.25s cubic-bezier(.18,.86,.24,1)}
@@ -342,7 +356,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
   <div class="dock">
     <p class="say" id="say"></p>
     <div class="odds idle" id="odds">
-      <div class="oddsbar"><span class="sp" id="segP"></span><span class="sr" id="segR"></span><span class="sm" id="segM"></span></div>
+      <div class="oddsbar"><span class="sp" id="segP"></span><span class="sr" id="segR"></span><span class="se" id="segE"></span><span class="sm" id="segM"></span></div>
       <div class="oddsread" id="oddsRead"></div>
       <div class="oddsmods" id="oddsMods"></div>
     </div>
@@ -356,12 +370,20 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
     <div class="shade"></div>
     <div class="toss" id="toss">
       <div class="cube" id="cube">
+        <div class="core">
+          <div class="face f-front"></div>
+          <div class="face f-back"></div>
+          <div class="face f-top"></div>
+          <div class="face f-bottom"></div>
+          <div class="face f-left"></div>
+          <div class="face f-right"></div>
+        </div>
         <div class="face f-front">+</div>
         <div class="face f-back">−</div>
         <div class="face f-top">RIM</div>
         <div class="face f-bottom">RIM</div>
-        <div class="face f-left"></div>
-        <div class="face f-right"></div>
+        <div class="face f-left">×2</div>
+        <div class="face f-right">÷2</div>
       </div>
     </div>
   </div>
@@ -387,8 +409,9 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
     <div class="rule"><span class="k">01</span><p>Drag your finger across the rival tiles you want, starting on one that touches your border. One tap takes one tile. <em>By eye — nobody measured anything.</em></p></div>
     <div class="rule"><span class="k">02</span><p>The odds move with the bite. Hug your own border and keep it modest and the others believe you; a deep greedy spear into their middle is a flip you will usually lose. You see the numbers before you commit. <em>This is the part the loudest kid used to shout about.</em></p></div>
     <div class="rule"><span class="k">03</span><p>Flip the eraser. <b style="color:#C6392E">Red +</b> and the land is yours. <b style="color:#2A5FC4">Blue −</b> and you hand over the same amount, taken from the ground right behind your push, so a deep raid risks the shoulder you launched it from.</p></div>
-    <div class="rule"><span class="k">04</span><p>Land on the narrow rim and you keep the land <em>and</em> draw a card. Arm one card before any flip: <b>Double</b> pays twice on a plus, <b>Shield</b> eats a minus, <b>Re-flip</b> buys a second throw, <b>Judge</b> talks the odds up. A card sits in your hand until it actually does something.</p></div>
-    <div class="rule"><span class="k">05</span><p>The bell ends recess after <b>12 rounds</b> and whoever holds the most map wins. Squeezed under <b>8%</b> and you give the rest up to whoever pushed you there, so nobody gets ground down tile by tile.</p></div>
+    <div class="rule"><span class="k">04</span><p>Land on a short end and the bet itself changes: <b>×2</b> doubles the bite, <b>÷2</b> halves it, and the eraser goes straight back up to settle the new one. Rarer than the rim, and it grows as the corners go.</p></div>
+    <div class="rule"><span class="k">05</span><p>Land on the narrow rim and you keep the land <em>and</em> draw a card. Arm one card before any flip: <b>Double</b> pays twice on a plus, <b>Shield</b> eats a minus, <b>Re-flip</b> buys a second throw, <b>Judge</b> talks the odds up. A card sits in your hand until it actually does something.</p></div>
+    <div class="rule"><span class="k">06</span><p>The bell ends recess after <b>12 rounds</b> and whoever holds the most map wins. Squeezed under <b>8%</b> and you give the rest up to whoever pushed you there, so nobody gets ground down tile by tile.</p></div>
     <h3 style="margin-top:18px">What's on the ground</h3>
     <div class="rule"><span class="k">△</span><p><b>Hills.</b> Rising ground is hard to argue your way onto. Every hill tile in your bite costs you believability.</p></div>
     <div class="rule"><span class="k">≈</span><p><b>The river.</b> It runs along the tile edges, not through them. Reaching across it to take ground costs you more than walking around, except at the two <b>fords</b>, marked with planks. In the rain the fords are the only way over at all.</p></div>
@@ -432,6 +455,9 @@ var ROUNDS = 12;          // the bell
 var RIM0 = 0.09;          // a fresh eraser's rim
 var RIM_WEAR = 0.009;     // every flip rounds the corners a little more
 var RIM_MAX = 0.22;
+var END0 = 0.02;         // landing on a short end: rarer still, and it scales the bet
+var END_WEAR = 0.003;
+var END_MAX = 0.08;
 var HAND_MAX = 3;
 var FORDS = 2;            // crossings the river cannot stop
 var SEASONS = [
@@ -542,6 +568,10 @@ var sfx = (function(){
         setTimeout(function(){ tone(990, 0.14, 'triangle', 0.06); }, 70);
       } else if (face === 'minus'){
         tone(210, 0.26, 'sine', 0.09, 120);
+      } else if (face === 'end'){
+        tone(1180, 0.09, 'square', 0.05);
+        setTimeout(function(){ tone(1770, 0.1, 'square', 0.045); }, 90);
+        setTimeout(function(){ tone(2360, 0.22, 'triangle', 0.04); }, 180);
       } else {
         tone(1560, 0.5, 'sine', 0.075); tone(2340, 0.42, 'sine', 0.035);
       }
@@ -569,7 +599,7 @@ var S = {
   hills:null, river:null, fords:null, capitals:[], wear:0, lastHit:[-1,-1,-1,-1],
   view:{x0:0, y0:0, w:COLS, h:ROWS},
   ghost:null, churn:null, weather:'clear', season:0,
-  fx:null, sketch:null, spin:0, winner:-1
+  fx:null, sketch:null, spin:0, spinY:0, winner:-1
 };
 
 var canvas = document.getElementById('map');
@@ -983,6 +1013,7 @@ function grabNear(ownerP, fromP, count, exclude, nearCells){
 // How much of the bite leans on your own border, against how greedy it is.
 // The rim widens as the corners wear off.
 function rimNow(){ return Math.min(RIM_MAX, RIM0 + S.wear * RIM_WEAR); }
+function endNow(){ return Math.min(END_MAX, END0 + S.wear * END_WEAR); }
 
 function capitalOwner(c){
   for (var p=0;p<S.np;p++) if (S.alive[p] && S.capitals[p] === c) return p;
@@ -1034,8 +1065,10 @@ function claimOdds(cells, me, withCard){
 
   var belief = Math.max(0.15, Math.min(0.75, 0.38 + total/100));
   var rim = Math.min(0.40, rimNow() * (S.weather === 'wind' ? 2 : 1));
-  var pl = belief * (1 - rim);                  // the rim takes from both faces
-  return {p:pl, rim:rim, minus:Math.max(0, 1 - pl - rim), mods:mods, belief:belief,
+  var end = endNow();
+  var flat = 1 - rim - end;
+  var pl = belief * flat;                       // rim and ends take from both faces
+  return {p:pl, rim:rim, end:end, minus:Math.max(0, flat - pl), mods:mods, belief:belief,
           n:cells.length, hills:hills, crossings:crossings, caps:caps, outskirts:outskirts};
 }
 
@@ -1052,6 +1085,7 @@ function renderOdds(){
     bar.className = 'oddsbar fogged';
     document.getElementById('segP').style.flexGrow = 1;
     document.getElementById('segR').style.flexGrow = 0;
+    document.getElementById('segE').style.flexGrow = 0;
     document.getElementById('segM').style.flexGrow = 1;
     document.getElementById('oddsRead').innerHTML =
       '<span>' + tiles(o.n) + ' on the table. Fog: no telling until it lands.</span>';
@@ -1061,11 +1095,13 @@ function renderOdds(){
   bar.className = 'oddsbar';
   document.getElementById('segP').style.flexGrow = o.p;
   document.getElementById('segR').style.flexGrow = o.rim;
+  document.getElementById('segE').style.flexGrow = o.end;
   document.getElementById('segM').style.flexGrow = o.minus;
   document.getElementById('oddsRead').innerHTML =
-    '<span class="kp"><b>' + pct(o.p) + '</b> ' + (S.cpu[S.turn] ? 'they take it' : 'you take it') + '</span>' +
-    '<span class="km"><b>' + pct(o.minus) + '</b> ' + (S.cpu[S.turn] ? 'they pay it' : 'you pay it') + '</span>' +
-    '<span class="kr"><b>' + pct(o.rim) + '</b> rim</span>';
+    '<span class="kp"><b>' + pct(o.p) + '</b> take</span>' +
+    '<span class="km"><b>' + pct(o.minus) + '</b> pay</span>' +
+    '<span class="kr"><b>' + pct(o.rim) + '</b> rim</span>' +
+    '<span class="ke"><b>' + pct(o.end) + '</b> ends</span>';
   var top = o.mods.slice().sort(function(a,b){ return Math.abs(b.v) - Math.abs(a.v); }).slice(0,3);
   document.getElementById('oddsMods').innerHTML = top.map(function(m){
     return '<span class="' + (m.v > 0 ? 'up' : 'dn') + '">' + m.k + ' ' +
@@ -1321,28 +1357,34 @@ function cpuTurn(){
 }
 
 /* ============ the flip ============ */
-function rollFace(o){
-  var r = Math.random();
-  if (r < o.p) return 'plus';
-  if (r < o.p + o.rim) return 'rim';
-  return 'minus';
+function rollFace(o, allowEnd){
+  var end = allowEnd ? o.end : 0;
+  var r = Math.random() * (1 - (allowEnd ? 0 : o.end));
+  if (r < end) return Math.random() < 0.5 ? 'x2' : 'half';
+  if (r < end + o.rim) return 'rim';
+  return (r - end - o.rim) < o.p ? 'plus' : 'minus';
 }
 
 function tumble(face, caption, done){
   var cube = document.getElementById('cube');
   var toss = document.getElementById('toss');
+  var onEnd = (face === 'x2' || face === 'half');
   S.wear++;                                        // every throw rounds it off a little more
   var worn = Math.min(1, S.wear / 16);
   cube.style.setProperty('--chip', (5 + 13*worn).toFixed(1) + 'px');
   cube.style.setProperty('--dust', (0.45*worn).toFixed(2));
   sfx.toss();
-  var angle = face === 'plus' ? 0 : face === 'minus' ? 180 : (Math.random() < 0.5 ? 90 : 270);
+  // rotateY(90) brings the left end round to face you, 270 the right one
+  var angle = onEnd ? 0 : face === 'plus' ? 0 : face === 'minus' ? 180 : (Math.random() < 0.5 ? 90 : 270);
+  var yaw = onEnd ? (face === 'x2' ? 90 : 270) + (Math.random()*14 - 7) : (-16 + Math.random()*8);
   document.getElementById('flipcap').textContent = caption;
   S.spin += 360 * 4 + ((angle - (S.spin % 360)) + 360) % 360;
+  S.spinY += (onEnd ? 720 : 360) + ((yaw - (S.spinY % 360)) + 360) % 360;
   cube.classList.remove('spinning'); toss.classList.remove('tossing');
   void cube.offsetWidth;
   cube.classList.add('spinning'); toss.classList.add('tossing');
-  cube.style.transform = 'rotateX(' + S.spin + 'deg) rotateY(' + (-16 + Math.random()*8) + 'deg) rotateZ(' + (Math.random()*7-3.5) + 'deg)';
+  cube.style.transform = 'rotateX(' + S.spin + 'deg) rotateY(' + S.spinY + 'deg) rotateZ(' +
+    (onEnd ? 0 : (Math.random()*7-3.5)) + 'deg)';
   var wait = window.matchMedia('(prefers-reduced-motion:reduce)').matches ? 400 : 2350;
   setTimeout(done, wait);
 }
@@ -1358,7 +1400,7 @@ function doFlip(){
   renderDock();
   S.odds = claimOdds(S.claim, me, true);
   var card = S.armed;
-  var face = rollFace(S.odds);
+  var face = rollFace(S.odds, true);
 
   setTimeout(function(){ toss(face, card, me); }, delay);
 }
@@ -1371,6 +1413,7 @@ function toss(face, card, me){
     ? nameOf(me) + ' flips the eraser…'
     : (card ? CARDS[card].name + ' down. In the air…' : 'in the air…');
   tumble(face, opener, function(){
+    if (face === 'x2' || face === 'half'){ endFace(face, card, me); return; }
     if (face === 'minus' && card === 'reflip'){
       var second = rollFace(S.odds);
       setTimeout(function(){
@@ -1380,6 +1423,55 @@ function toss(face, card, me){
     }
     landed(face, card, me, false);
   });
+}
+
+function showVerdict(title, sub, tone){
+  var ink = isDark() ? {plus:'#F0705F', minus:'#6C9CF2', rim:'#E8BB56'}
+                     : {plus:'#C6392E', minus:'#2A5FC4', rim:'#A87C1F'};
+  var vt = document.getElementById('verdictTitle');
+  vt.textContent = title;
+  vt.style.color = ink[tone] || ink.rim;
+  vt.style.borderColor = ink[tone] || ink.rim;
+  document.getElementById('verdictSub').textContent = sub;
+  document.getElementById('flipcap').textContent = '';
+  document.getElementById('verdict').classList.add('show');
+}
+
+// A short end doubles or halves what is on the table, then it goes up again.
+function endFace(face, card, me){
+  var doubled = face === 'x2', i, n0 = S.claim.length;
+  if (doubled){
+    var ex = {};
+    for (i=0;i<S.claim.length;i++) ex[S.claim[i]] = 1;
+    var extra = grabNear(S.target, me, n0, ex, S.claim);
+    S.claim = S.claim.concat(extra);
+  } else {
+    S.claim = S.claim.slice(0, Math.max(1, Math.ceil(n0 / 2)));
+  }
+  S.claimSet = {};
+  for (i=0;i<S.claim.length;i++) S.claimSet[S.claim[i]] = 1;
+  S.odds = claimOdds(S.claim, me, true);
+  renderOdds(); draw();
+
+  showVerdict(doubled ? '\u00d72' : '\u00f72',
+    (doubled ? 'The bite doubles to ' : 'The bite halves to ') + tiles(S.claim.length) + '. Throw again.', 'rim');
+  sfx.land('end');
+  if (navigator.vibrate){ try { navigator.vibrate([20,50,20,50,20]); } catch(e){} }
+
+  setTimeout(function(){
+    document.getElementById('verdict').classList.remove('show');
+    var second = rollFace(S.odds, false);
+    tumble(second, doubled ? 'Double or nothing\u2026' : 'Once more\u2026', function(){
+      if (second === 'minus' && card === 'reflip'){
+        var third = rollFace(S.odds, false);
+        setTimeout(function(){
+          tumble(third, 'Re-flip \u2014 one more throw.', function(){ landed(third, card, me, true); });
+        }, 500);
+        return;
+      }
+      landed(second, card, me, false);
+    });
+  }, 1500);
 }
 
 function landed(face, card, me, reflipped){
@@ -1406,14 +1498,7 @@ function landed(face, card, me, reflipped){
   if (card === 'judge') used = 'judge';
   if (card === 'reflip' && reflipped) used = 'reflip';
 
-  var ink = isDark() ? {plus:'#F0705F', minus:'#6C9CF2', rim:'#E8BB56'} : {plus:'#C6392E', minus:'#2A5FC4', rim:'#A87C1F'};
-  var shade = (face === 'plus') ? ink.plus : (face === 'rim' || title === 'blocked') ? ink.rim : ink.minus;
-  var vt = document.getElementById('verdictTitle');
-  vt.textContent = title;
-  vt.style.color = shade; vt.style.borderColor = shade;
-  document.getElementById('verdictSub').textContent = sub;
-  document.getElementById('flipcap').textContent = '';
-  document.getElementById('verdict').classList.add('show');
+  showVerdict(title, sub, (face === 'plus') ? 'plus' : (face === 'rim' || title === 'blocked') ? 'rim' : 'minus');
   sfx.land(title === 'blocked' ? 'rim' : face);
   if (navigator.vibrate){ try { navigator.vibrate(face === 'minus' && title !== 'blocked' ? [30,60,30] : 45); } catch(e){} }
 
