@@ -76,11 +76,15 @@ body{
   font:700 10px/1.2 Karla,sans-serif; color:var(--ink-soft); font-variant-numeric:tabular-nums;
 }
 .round{
-  flex:0 0 auto; display:flex; align-items:baseline; gap:4px; padding:7px 9px 8px;
+  flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-start; gap:1px; padding:6px 9px 7px;
   border-radius:3px; background:var(--panel); border:1px solid var(--edge);
   font:500 11px/1.1 "Familjen Grotesk",sans-serif; color:var(--ink-soft);
 }
 .round b{font-weight:700; font-size:13px; color:var(--ink); font-variant-numeric:tabular-nums}
+.round i{font:600 10px/1.2 "Familjen Grotesk",sans-serif; font-style:normal; letter-spacing:.1em; text-transform:uppercase; color:var(--wxc,var(--ink-soft))}
+.round.wx-river{--wxc:var(--river)}
+.round.wx-rim{--wxc:var(--face-rim)}
+.round.wx-soft{--wxc:var(--ink-soft)}
 .round.warn{border-color:var(--stamp); color:var(--stamp)}
 .round.warn b{color:var(--stamp)}
 
@@ -95,11 +99,26 @@ canvas{
   display:block;
 }
 
+.wx{
+  position:absolute; top:6px; left:6px; right:6px; z-index:5; pointer-events:none;
+  padding:9px 11px; border-radius:4px;
+  background:var(--panel); border:1px solid var(--edge); border-left:4px solid var(--wxc,var(--ink-soft));
+  font:400 13.5px/1.3 Karla,sans-serif; color:var(--ink);
+  box-shadow:0 10px 22px -16px var(--shadow);
+  opacity:0; transform:translateY(-10px); transition:opacity .32s, transform .32s;
+}
+.wx.show{opacity:1; transform:none}
+.wx b{font-family:"Familjen Grotesk",sans-serif; font-weight:700; margin-right:6px; color:var(--wxc,var(--ink))}
+.wx.tone-river{--wxc:var(--river)}
+.wx.tone-rim{--wxc:var(--face-rim)}
+.wx.tone-soft{--wxc:var(--ink-soft)}
+@media (prefers-reduced-motion:reduce){ .wx{transition:opacity .01s} }
+
 /* ---------- dock ---------- */
 .dock{flex:0 0 auto; display:flex; flex-direction:column; gap:9px}
 .say{
-  margin:0; font-family:"Patrick Hand",cursive; font-size:17px; line-height:1.25;
-  color:var(--ink); min-height:2.5em; display:flex; align-items:center;
+  margin:0; font-family:"Patrick Hand",cursive; font-size:16.5px; line-height:1.22;
+  color:var(--ink); min-height:2.2em; display:flex; align-items:center;
 }
 .say b{color:var(--c,var(--ink)); font-weight:400; border-bottom:2px solid var(--c,var(--ink))}
 .actions{display:flex; gap:8px}
@@ -129,6 +148,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 .oddsbar .sp{background:var(--face-plus)}
 .oddsbar .sr{background:var(--face-rim)}
 .oddsbar .sm{background:var(--face-minus)}
+.oddsbar.fogged span{background:repeating-linear-gradient(45deg, var(--edge) 0 3px, transparent 3px 6px)}
 .oddsread{
   display:flex; gap:12px; font:500 12px/1 Karla,sans-serif; color:var(--ink-soft);
   font-variant-numeric:tabular-nums;
@@ -142,12 +162,12 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 .oddsread .kr b{color:var(--face-rim)}
 .hand{
   display:flex; justify-content:center; align-items:flex-end;
-  height:134px; padding-top:26px; transition:opacity .2s;
+  height:120px; padding-top:24px; transition:opacity .2s;
 }
 .hand:empty{display:none; height:0; padding:0}
 .slot{flex:0 0 auto; margin:0 -4px; transform-origin:50% 130%}
 .pcard{
-  position:relative; width:76px; height:106px; padding:13px 4px 15px; cursor:pointer;
+  position:relative; width:74px; height:96px; padding:11px 4px 13px; cursor:pointer;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
   background:var(--panel); color:var(--ink);
   border:1.5px solid var(--ink); border-radius:6px;
@@ -160,7 +180,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
   font:700 10px/1 "Familjen Grotesk",sans-serif; letter-spacing:.06em;
 }
 .pcard .rank.br{top:auto; left:auto; bottom:5px; right:6px; transform:rotate(180deg)}
-.pcard svg{width:33px; height:33px; display:block; overflow:visible}
+.pcard svg{width:29px; height:29px; display:block; overflow:visible}
 .pcard .nm{font:700 11px/1 "Familjen Grotesk",sans-serif; letter-spacing:-.01em}
 .pcard .rl{font:400 8.5px/1.15 Karla,sans-serif; color:var(--ink-soft); text-align:center; padding:0 2px}
 .pcard.armed{
@@ -292,7 +312,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 
   <div class="scores" id="scores"></div>
 
-  <div class="board"><canvas id="map"></canvas></div>
+  <div class="board"><canvas id="map"></canvas><div class="wx" id="wx"></div></div>
 
   <div class="dock">
     <p class="say" id="say"></p>
@@ -335,8 +355,10 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
     <div class="rule"><span class="k">05</span><p>The bell ends recess after <b>12 rounds</b> and whoever holds the most map wins. Squeezed under <b>8%</b> and you give the rest up to whoever pushed you there, so nobody gets ground down tile by tile.</p></div>
     <h3 style="margin-top:18px">What's on the ground</h3>
     <div class="rule"><span class="k">△</span><p><b>Hills.</b> Rising ground is hard to argue your way onto. Every hill tile in your bite costs you believability.</p></div>
-    <div class="rule"><span class="k">≈</span><p><b>The river.</b> It runs along the tile edges, not through them. Reaching across it to take ground costs you more than walking around.</p></div>
+    <div class="rule"><span class="k">≈</span><p><b>The river.</b> It runs along the tile edges, not through them. Reaching across it to take ground costs you more than walking around, except at the two <b>fords</b>, marked with planks. In the rain the fords are the only way over at all.</p></div>
+    <div class="rule"><span class="k">☁</span><p><b>The seasons.</b> Recess runs through a year. Spring brings rain, summer a dry spell that lets you walk the riverbed, autumn a wind that doubles the rim, winter a fog that hides the odds until the eraser lands. Each round announces itself.</p></div>
     <div class="rule"><span class="k">⚑</span><p><b>Capitals.</b> Each flag sits on a real tile. It is defended, but take it and the line around it breaks: a further <b>30%</b> of that player's land comes with it, and they plant a new flag in whatever is left.</p></div>
+    <div class="rule"><span class="k">◌</span><p><b>Old ground shows.</b> Tiles that have changed hands keep a smudge of whoever held them before, so by the last rounds you can see where the fighting was.</p></div>
     <div class="rule"><span class="k">◍</span><p><b>The eraser wears.</b> Every throw rounds the corners a little more, so the rim comes up more often as recess goes on. Late flips are luckier than early ones.</p></div>
     <div class="actions" style="margin-top:16px"><button class="act" id="closeRules" type="button">Back to the map</button></div>
   </div>
@@ -362,7 +384,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 'use strict';
 
 /* ============ constants ============ */
-var COLS = 18, ROWS = 29;
+var COLS = 20, ROWS = 32;
 var LIGHT = ['#C6392E','#2A5FC4','#3C7F55','#C4901F'];
 var DARK  = ['#F0705F','#6C9CF2','#63BE86','#E8BB56'];
 var NAMES = ['Red','Blue','Green','Ochre'];
@@ -374,6 +396,20 @@ var RIM0 = 0.09;          // a fresh eraser's rim
 var RIM_WEAR = 0.009;     // every flip rounds the corners a little more
 var RIM_MAX = 0.22;
 var HAND_MAX = 3;
+var FORDS = 2;            // crossings the river cannot stop
+var SEASONS = [
+  {name:'Spring', table:[['rain',0.6], ['clear',1]]},
+  {name:'Summer', table:[['dry',0.6],  ['clear',1]]},
+  {name:'Autumn', table:[['wind',0.6], ['clear',1]]},
+  {name:'Winter', table:[['fog',0.55], ['clear',1]]}
+];
+var WEATHER = {
+  clear:{tag:'clear',  tone:'soft', line:'A clear day. Nothing in the way.'},
+  rain: {tag:'rain',   tone:'river',line:'Rain. The river is up, and only the fords will take you across.'},
+  dry:  {tag:'dry',    tone:'rim',  line:'A dry spell. The river is low enough to walk.'},
+  wind: {tag:'wind',   tone:'rim',  line:'Wind across the desk. The eraser skitters: the rim comes up twice as often.'},
+  fog:  {tag:'fog',    tone:'soft', line:'Fog on the map. No telling the odds until it lands.'}
+};
 var HILL_SHARE = 0.11;    // of the land
 var ROUT_SHARE = 0.08;    // hold less than this and you give up the rest
 var CAPITAL_ROUT = 0.30;  // lose your capital, lose this much more with it
@@ -492,7 +528,8 @@ var S = {
   phase:'draw',            // draw | confirm | flip | over
   claim:[], claimSet:{}, target:-1, capped:false,
   round:1, hands:[[],[],[],[]], armed:null, odds:null, justDrew:-1, alive:[],
-  hills:null, river:null, capitals:[], wear:0, lastHit:[-1,-1,-1,-1],
+  hills:null, river:null, fords:null, capitals:[], wear:0, lastHit:[-1,-1,-1,-1],
+  ghost:null, churn:null, weather:'clear', season:0,
   fx:null, sketch:null, spin:0, winner:-1
 };
 
@@ -686,13 +723,45 @@ function makeRiver(owner){
   return best;
 }
 
-function isRiver(a, b){
-  if (b === a + 1) return !!S.river[a*2];
-  if (a === b + 1) return !!S.river[b*2];
-  if (b === a + COLS) return !!S.river[a*2 + 1];
-  if (a === b + COLS) return !!S.river[b*2 + 1];
-  return false;
+function makeFords(river, owner){
+  var edges = [], k;
+  for (k in river){
+    var e = +k, c = e >> 1, down = e & 1;
+    var other = down ? c + COLS : c + 1;
+    if (other >= owner.length) continue;
+    if (owner[c] === SEA || owner[other] === SEA) continue;   // a ford needs both banks
+    edges.push(e);
+  }
+  shuffle(edges);
+  var fords = {}, taken = [];
+  for (var i=0;i<edges.length && taken.length < FORDS;i++){
+    var cand = edges[i], cc = cand >> 1, ok = true;
+    for (var t=0;t<taken.length;t++){
+      var tc = taken[t] >> 1;
+      if (Math.abs(xOf(cc)-xOf(tc)) + Math.abs(yOf(cc)-yOf(tc)) < 6) ok = false;   // keep them apart
+    }
+    if (!ok) continue;
+    fords[cand] = 1; taken.push(cand);
+  }
+  return fords;
 }
+
+function edgeKey(a, b){
+  if (b === a + 1) return a*2;
+  if (a === b + 1) return b*2;
+  if (b === a + COLS) return a*2 + 1;
+  if (a === b + COLS) return b*2 + 1;
+  return -1;
+}
+function isFord(a, b){ var e = edgeKey(a,b); return e >= 0 && !!S.fords[e]; }
+
+// In the rain the river cannot be crossed at all, except at a ford.
+function linked(a, b){
+  if (S.weather !== 'rain') return true;
+  return !(isRiver(a, b) && !isFord(a, b));
+}
+
+function isRiver(a, b){ var e = edgeKey(a,b); return e >= 0 && !!S.river[e]; }
 
 function partition(land, np, seedsOut){
   var owner = new Int8Array(land.length);
@@ -762,8 +831,12 @@ function newGame(np, seat){
   S.capitals = seeds.slice(0, np);
   S.hills = makeHills(S.owner);
   S.river = makeRiver(S.owner);
+  S.fords = makeFords(S.river, S.owner);
+  S.weather = 'clear'; S.season = 0;
   for (var q=0;q<np;q++) S.hills[S.capitals[q]] = 0;   // a capital sits on flat ground
   S.wear = 0; S.lastHit = [-1,-1,-1,-1];
+  S.ghost = new Int8Array(COLS*ROWS); S.churn = new Int8Array(COLS*ROWS);
+  for (var gz=0;gz<S.ghost.length;gz++) S.ghost[gz] = -1;
   S.jitter = new Float32Array(COLS*ROWS);
   for (var i=0;i<S.jitter.length;i++) S.jitter[i] = 0.82 + Math.random()*0.18;
   S.cpu = [];
@@ -774,15 +847,25 @@ function newGame(np, seat){
   S.fx = null; S.winner = -1; S.phase = 'draw';
   fit();
   renderHUD();
+  rollWeather();
   beginTurn();
 }
 
 /* ============ claim maths ============ */
 function maxClaim(p){ return Math.max(3, Math.min(CLAIM_CEIL, Math.round(countOf(p) * CLAIM_SHARE))); }
 
+// Every tile remembers who held it last, and how often it has changed hands.
+function setOwner(cell, who){
+  var was = S.owner[cell];
+  if (was === who || was === SEA) { S.owner[cell] = who; return; }
+  S.ghost[cell] = was;
+  S.churn[cell] = Math.min(6, S.churn[cell] + 1);
+  S.owner[cell] = who;
+}
+
 function touchesOwner(cellI, p){
   var ns = nbrs(cellI);
-  for (var i=0;i<ns.length;i++) if (S.owner[ns[i]] === p) return true;
+  for (var i=0;i<ns.length;i++) if (S.owner[ns[i]] === p && linked(cellI, ns[i])) return true;
   return false;
 }
 // Grow a blob of `count` cells belonging to `ownerP`, starting from its cells that border `fromP`.
@@ -849,7 +932,10 @@ function claimOdds(cells, me, withCard){
       if (nb < 0){ per++; continue; }
       if (set[nb]) continue;
       per++;
-      if (S.owner[nb] === me){ shared++; if (isRiver(c, nb)) crossings++; }
+      if (S.owner[nb] === me){
+        shared++;
+        if (S.weather !== 'dry' && isRiver(c, nb) && !isFord(c, nb)) crossings++;
+      }
     }
   }
   var rn = Math.max(0, Math.min(1, (per ? shared/per : 0) / 0.45));
@@ -866,7 +952,7 @@ function claimOdds(cells, me, withCard){
   if (withCard && S.armed === 'judge') mod('judge', 15);
 
   var belief = Math.max(0.15, Math.min(0.75, 0.38 + total/100));
-  var rim = rimNow();
+  var rim = Math.min(0.40, rimNow() * (S.weather === 'wind' ? 2 : 1));
   var pl = belief * (1 - rim);                  // the rim takes from both faces
   return {p:pl, rim:rim, minus:Math.max(0, 1 - pl - rim), mods:mods, belief:belief,
           n:cells.length, hills:hills, crossings:crossings, caps:caps};
@@ -880,6 +966,18 @@ function renderOdds(){
   var o = live && S.claim.length ? claimOdds(S.claim, S.turn, true) : null;
   if (!o){ host.hidden = true; return; }
   host.hidden = false;
+  var bar = host.querySelector('.oddsbar');
+  if (S.weather === 'fog'){
+    bar.className = 'oddsbar fogged';
+    document.getElementById('segP').style.flexGrow = 1;
+    document.getElementById('segR').style.flexGrow = 0;
+    document.getElementById('segM').style.flexGrow = 1;
+    document.getElementById('oddsRead').innerHTML =
+      '<span>' + tiles(o.n) + ' on the table. Fog: no telling until it lands.</span>';
+    document.getElementById('oddsMods').innerHTML = '';
+    return;
+  }
+  bar.className = 'oddsbar';
   document.getElementById('segP').style.flexGrow = o.p;
   document.getElementById('segR').style.flexGrow = o.rim;
   document.getElementById('segM').style.flexGrow = o.minus;
@@ -969,7 +1067,7 @@ function capitalFalls(target, me, gained){
   if (!took) return null;
   var extra = Math.ceil(countOf(target) * CAPITAL_ROUT);
   var spoils = extra > 0 ? grabNear(target, me, extra, null, [capCell]) : [];
-  for (i=0;i<spoils.length;i++) S.owner[spoils[i]] = me;
+  for (i=0;i<spoils.length;i++) setOwner(spoils[i], me);
   S.capitals[target] = capitalOf(target);      // what is left gets a new one, or -1
   return spoils;
 }
@@ -984,7 +1082,7 @@ function routCheck(){
     var to = S.lastHit[p];
     if (to < 0 || to === p || !S.alive[to] || countOf(to) === 0) to = biggestNeighbour(p);
     if (to < 0) continue;
-    for (i=0;i<S.owner.length;i++) if (S.owner[i] === p) S.owner[i] = to;
+    for (i=0;i<S.owner.length;i++) if (S.owner[i] === p) setOwner(i, to);
     S.capitals[p] = -1;
     S.alive[p] = false;
     notes.push({from:p, to:to, n:n});
@@ -1034,9 +1132,28 @@ function nextTurn(){
   if (S.turn <= prev){
     S.round++;
     if (S.round > ROUNDS){ S.round = ROUNDS; endGame(true); return; }
+    rollWeather();
   }
   beginTurn();
 }
+function seasonOf(round){
+  return Math.max(0, Math.min(SEASONS.length-1, Math.floor((round-1) / (ROUNDS / SEASONS.length))));
+}
+function rollWeather(){
+  S.season = seasonOf(S.round);
+  var table = SEASONS[S.season].table, r = Math.random(), pick = 'clear';
+  for (var i=0;i<table.length;i++){ if (r < table[i][1]){ pick = table[i][0]; break; } }
+  S.weather = pick;
+  showWeather();
+}
+function showWeather(){
+  var el = document.getElementById('wx');
+  el.className = 'wx show tone-' + WEATHER[S.weather].tone;
+  el.innerHTML = '<b>' + SEASONS[S.season].name + '</b> ' + WEATHER[S.weather].line;
+  clearTimeout(showWeather.t);
+  showWeather.t = setTimeout(function(){ el.className = 'wx'; }, 2900);
+}
+
 function beginTurn(){
   S.claim = []; S.claimSet = {}; S.target = -1; S.capped = false; S.sketch = null;
   S.armed = null; S.odds = null;
@@ -1073,7 +1190,8 @@ function cpuTurn(){
     var cand = grabNear(target, me, want, null);
     if (!cand.length) continue;
     var o = claimOdds(cand, me, false);
-    var ev = (o.p + o.rim - o.minus) * cand.length + urgency * cand.length;
+    var guess = S.weather === 'fog' ? o.p + (Math.random()-0.5)*0.16 : o.p;   // fog blinds it too
+    var ev = (guess + o.rim - (1 - guess - o.rim)) * cand.length + urgency * cand.length;
     if (o.caps) ev += o.p * countOf(target) * CAPITAL_ROUT;   // a capital is worth the walk
     if (!pick || ev > pick.ev) pick = {cells:cand, ev:ev, o:o};
   }
@@ -1208,10 +1326,10 @@ function resolve(face, blocked, used, me, target, cells){
   S.armed = null;
 
   if (face === 'plus' || face === 'rim'){
-    for (i=0;i<cells.length;i++){ S.owner[cells[i]] = me; gained.push(cells[i]); }
+    for (i=0;i<cells.length;i++){ setOwner(cells[i], me); gained.push(cells[i]); }
     if (used === 'double'){
       var extra = grabNear(target, me, cells.length, null);
-      for (i=0;i<extra.length;i++){ S.owner[extra[i]] = me; gained.push(extra[i]); }
+      for (i=0;i<extra.length;i++){ setOwner(extra[i], me); gained.push(extra[i]); }
     }
     S.lastHit[target] = me;
     var fallen = capitalFalls(target, me, gained);
@@ -1230,7 +1348,7 @@ function resolve(face, blocked, used, me, target, cells){
   } else {
     // you pay from the ground you attacked across, not from somewhere safe
     var give = grabNear(me, target, cells.length, null, cells);
-    for (i=0;i<give.length;i++){ S.owner[give[i]] = target; lost.push(give[i]); }
+    for (i=0;i<give.length;i++){ setOwner(give[i], target); lost.push(give[i]); }
     S.lastHit[me] = target;
     var backFall = capitalFalls(me, target, give);
     if (backFall){ for (i=0;i<backFall.length;i++) lost.push(backFall[i]); }
@@ -1300,6 +1418,30 @@ function paint(){
   }
   ctx.globalAlpha = 1;
 
+  // pencil ghosts: the colour of whoever held a tile before, rubbed out but
+  // never quite gone
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (i=0;i<S.owner.length;i++){
+    var g = S.ghost[i];
+    if (g < 0 || S.owner[i] === SEA || g === S.owner[i]) continue;
+    var gx = xOf(i)*cell, gy = yOf(i)*cell, j = S.jitter[i];
+    var strokes = 2 + (S.churn[i] > 2 ? 1 : 0);
+    ctx.strokeStyle = col(g);
+    ctx.globalAlpha = Math.min(0.2, 0.055 + 0.03 * S.churn[i]);
+    ctx.lineWidth = cell * 0.2;
+    ctx.beginPath();
+    for (var sSt=0; sSt<strokes; sSt++){
+      var off = (sSt - (strokes-1)/2) * cell * 0.26;
+      var lean = 0.16 + j*0.1;                       // the angle of the rub
+      ctx.moveTo(gx + cell*(0.16 + j*0.1) + off, gy + cell*(0.78 - lean) + off*0.35);
+      ctx.lineTo(gx + cell*(0.74 + j*0.1) + off, gy + cell*(0.24 + lean) + off*0.35);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
   // notebook squares over the top
   ctx.strokeStyle = THEME.grid; ctx.lineWidth = 1; ctx.globalAlpha = 0.5;
   ctx.beginPath();
@@ -1354,6 +1496,25 @@ function paint(){
     }
     ctx.stroke();
   }
+  ctx.restore();
+
+  // fords: two planks laid across the water
+  ctx.save();
+  ctx.strokeStyle = THEME.coast; ctx.globalAlpha = 0.95;
+  ctx.lineWidth = Math.max(1.2, cell*0.1); ctx.lineCap = 'butt';
+  ctx.beginPath();
+  for (var fk in S.fords){
+    var fe = +fk, fc = fe >> 1, fdown = fe & 1;
+    var ffx = xOf(fc)*cell, ffy = yOf(fc)*cell;
+    if (!fdown){
+      ctx.moveTo(ffx + cell*0.72, ffy + cell*0.28); ctx.lineTo(ffx + cell*1.28, ffy + cell*0.28);
+      ctx.moveTo(ffx + cell*0.72, ffy + cell*0.72); ctx.lineTo(ffx + cell*1.28, ffy + cell*0.72);
+    } else {
+      ctx.moveTo(ffx + cell*0.28, ffy + cell*0.72); ctx.lineTo(ffx + cell*0.28, ffy + cell*1.28);
+      ctx.moveTo(ffx + cell*0.72, ffy + cell*0.72); ctx.lineTo(ffx + cell*0.72, ffy + cell*1.28);
+    }
+  }
+  ctx.stroke();
   ctx.restore();
 
   // where your finger can start: rival tiles pressed against your border
@@ -1510,9 +1671,10 @@ function renderHUD(){
   var left = ROUNDS - S.round;
   var r = document.createElement('div');
   r.className = 'round' + (left <= 2 ? ' warn' : '');
+  r.className += ' wx-' + WEATHER[S.weather].tone;
   r.innerHTML = S.phase === 'over'
-    ? '<b>bell</b>'
-    : 'round <b>' + S.round + '</b>/' + ROUNDS;
+    ? '<span><b>bell</b></span>'
+    : '<span>round <b>' + S.round + '</b>/' + ROUNDS + '</span><i>' + WEATHER[S.weather].tag + '</i>';
   host.appendChild(r);
 }
 
@@ -1592,7 +1754,7 @@ function addCell(c, me){
   if (c < 0 || S.claimSet[c] || S.owner[c] !== S.target) return;
   if (S.claim.length >= maxClaim(me)){ S.capped = true; return; }
   var ns = nbrs(c), joined = false;
-  for (var i=0;i<ns.length;i++) if (S.claimSet[ns[i]]){ joined = true; break; }
+  for (var i=0;i<ns.length;i++) if (S.claimSet[ns[i]] && linked(c, ns[i])){ joined = true; break; }
   if (!joined && !touchesOwner(c, me)) return;      // the bite stays one piece
   S.claim.push(c); S.claimSet[c] = 1;
   sfx.scratch();

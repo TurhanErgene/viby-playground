@@ -53,9 +53,36 @@ it is behind late.
 **Hills** are drawn as pencil rises and cost believability to attack into.
 **The river** runs along tile edges rather than through them, so it divides
 the map without taking ground out of play; reaching across it to take land
-costs you. **Capitals** are a flag on a real tile: defended, but taking one
-breaks the line and a further 30% of that player's land goes with it, after
-which they plant a new flag in whatever is left.
+costs you. **Fords** are two marked crossings where the river costs nothing,
+and in the rain they are the only way over at all, which makes them the one
+piece of ground both players want. **Capitals** are a flag on a real tile:
+defended, but taking one breaks the line and a further 30% of that player's
+land goes with it, after which they plant a new flag in whatever is left.
+
+## The seasons
+
+Recess runs through a year. The twelve rounds pass through spring, summer,
+autumn and winter, and each round draws a condition from its season's table
+and announces itself over the map:
+
+| Condition | Season | Effect |
+| --- | --- | --- |
+| Rain | spring | The river cannot be crossed except at a ford |
+| Dry | summer | River crossings cost nothing |
+| Wind | autumn | The rim comes up twice as often |
+| Fog | winter | The odds are hidden until the eraser lands (for the CPU too) |
+| Clear | any | Nothing |
+
+Rain works by removing river edges from the adjacency graph in `linked()`,
+so it changes what you are allowed to claim rather than adding another
+number to the odds.
+
+## Pencil ghosts
+
+Every tile remembers who held it last and how often it has changed hands
+(`ghost` and `churn`, written only through `setOwner`). Old owners show as
+faint rub-strokes in their colour under the current fill, so by the last
+rounds the map shows where the fighting was.
 
 ## The eraser wears out
 
@@ -90,12 +117,14 @@ The knobs are all constants at the top of the script:
 
 | Constant | Default | Does |
 | --- | --- | --- |
-| `COLS`, `ROWS` | 18, 29 | Map grid |
+| `COLS`, `ROWS` | 20, 32 | Map grid |
 | `ROUNDS` | 12 | Rounds before the bell |
 | `CLAIM_SHARE`, `CLAIM_CEIL` | 0.20, 30 | Per-turn claim cap, as a share of what you hold |
 | `RIM0`, `RIM_WEAR`, `RIM_MAX` | 0.09, 0.009, 0.22 | Rim chance when fresh, per flip, and at its most worn |
 | `HAND_MAX` | 3 | Cards held at once |
 | `HILL_SHARE` | 0.11 | Share of land that is hills |
+| `FORDS` | 2 | Free crossings on the river |
+| `SEASONS`, `WEATHER` | - | The year's conditions and what each does |
 | `ROUT_SHARE` | 0.08 | Hold less than this and you give up the rest |
 | `CAPITAL_ROUT` | 0.30 | Extra land lost with a captured capital |
 
@@ -105,11 +134,12 @@ Believability constants live in `claimOdds()`.
 
 | Section | What lives there |
 | --- | --- |
-| map generation | `makeLand` (metaball landmass, chewed coast), `recenter`, `largestBlob`, `partition` (lockstep growth so shares start even, and its seeds become the capitals), `makeHills`, `makeRiver` |
+| map generation | `makeLand` (metaball landmass, chewed coast), `recenter`, `largestBlob`, `partition` (lockstep growth so shares start even, and its seeds become the capitals), `makeHills`, `makeRiver`, `makeFords` |
 | claims | `grabNear` (grow a contiguous blob), `addCell` / `strokeStart` / `strokeMove` (painting), `claimOdds` |
-| turn flow | `beginTurn`, `cpuTurn`, `nextTurn`, `endGame` |
+| turn flow | `beginTurn`, `cpuTurn`, `nextTurn`, `endGame`, `rollWeather` |
 | collapse | `capitalFalls` (a capital taken breaks the line), `routCheck` (under the threshold, surrender the rest), `biggestNeighbour` |
 | sound | `sfx`, a small WebAudio synth with `hiss` and `tone` |
+| history | `setOwner` is the only way a tile changes hands, and it records the ghost |
 | the flip | `rollFace`, `doFlip`, `toss`, `tumble`, `landed`, `resolve` |
 | rendering | `paint` (canvas), `renderHUD`, `renderDock`, `renderOdds`, `renderHand` |
 
