@@ -417,7 +417,6 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
     <div class="rule"><span class="k">≈</span><p><b>The river.</b> It runs along the tile edges, not through them. Reaching across it to take ground costs you more than walking around, except at the two <b>fords</b>, marked with planks. In the rain the fords are the only way over at all.</p></div>
     <div class="rule"><span class="k">☁</span><p><b>The seasons.</b> Recess runs through a year. Spring brings rain, summer a dry spell that lets you walk the riverbed, autumn a wind that doubles the rim, winter a fog that hides the odds until the eraser lands. Each round announces itself.</p></div>
     <div class="rule"><span class="k">⚑</span><p><b>Capitals.</b> Each flag sits on a real tile. The ground immediately around it is loose, because the crowd is all inside the walls, so the outskirts come away easily. The flag tile itself is the hard part, and taking it breaks the line: a further <b>30%</b> of that player's land comes with it, and they plant a new flag in whatever is left.</p></div>
-    <div class="rule"><span class="k">◌</span><p><b>Old ground shows.</b> Tiles that have changed hands keep a smudge of whoever held them before, so by the last rounds you can see where the fighting was.</p></div>
     <div class="rule"><span class="k">◍</span><p><b>The eraser wears.</b> Every throw rounds the corners a little more, so the rim comes up more often as recess goes on. Late flips are luckier than early ones.</p></div>
     <div class="actions" style="margin-top:16px"><button class="act" id="closeRules" type="button">Back to the map</button></div>
   </div>
@@ -598,7 +597,7 @@ var S = {
   solo:0, hotseat:false, cpuSetup:[false,true,true,true],
   hills:null, river:null, fords:null, capitals:[], wear:0, lastHit:[-1,-1,-1,-1],
   view:{x0:0, y0:0, w:COLS, h:ROWS},
-  ghost:null, churn:null, weather:'clear', season:0,
+  weather:'clear', season:0,
   fx:null, sketch:null, spin:0, spinY:0, winner:-1
 };
 
@@ -931,8 +930,6 @@ function newGame(np, cpuFlags){
   S.weather = 'clear'; S.season = 0;
   for (var q=0;q<np;q++) S.hills[S.capitals[q]] = 0;   // a capital sits on flat ground
   S.wear = 0; S.lastHit = [-1,-1,-1,-1];
-  S.ghost = new Int8Array(COLS*ROWS); S.churn = new Int8Array(COLS*ROWS);
-  for (var gz=0;gz<S.ghost.length;gz++) S.ghost[gz] = -1;
   S.jitter = new Float32Array(COLS*ROWS);
   for (var i=0;i<S.jitter.length;i++) S.jitter[i] = 0.82 + Math.random()*0.18;
   S.cpu = [];
@@ -955,14 +952,8 @@ function newGame(np, cpuFlags){
 /* ============ claim maths ============ */
 function maxClaim(p){ return Math.max(3, Math.min(CLAIM_CEIL, Math.round(countOf(p) * CLAIM_SHARE))); }
 
-// Every tile remembers who held it last, and how often it has changed hands.
-function setOwner(cell, who){
-  var was = S.owner[cell];
-  if (was === who || was === SEA) { S.owner[cell] = who; return; }
-  S.ghost[cell] = was;
-  S.churn[cell] = Math.min(6, S.churn[cell] + 1);
-  S.owner[cell] = who;
-}
+// The one place a tile changes hands.
+function setOwner(cell, who){ S.owner[cell] = who; }
 
 function touchesOwner(cellI, p){
   var ns = nbrs(cellI);
@@ -1614,30 +1605,6 @@ function paint(){
     ctx.fillRect(xOf(i)*cell, yOf(i)*cell, cell, cell);
   }
   ctx.globalAlpha = 1;
-
-  // pencil ghosts: the colour of whoever held a tile before, rubbed out but
-  // never quite gone
-  ctx.save();
-  ctx.lineCap = 'round';
-  for (i=0;i<S.owner.length;i++){
-    var g = S.ghost[i];
-    if (g < 0 || S.owner[i] === SEA || g === S.owner[i]) continue;
-    var gx = xOf(i)*cell, gy = yOf(i)*cell, j = S.jitter[i];
-    var strokes = 2 + (S.churn[i] > 2 ? 1 : 0);
-    ctx.strokeStyle = col(g);
-    ctx.globalAlpha = Math.min(0.2, 0.055 + 0.03 * S.churn[i]);
-    ctx.lineWidth = cell * 0.2;
-    ctx.beginPath();
-    for (var sSt=0; sSt<strokes; sSt++){
-      var off = (sSt - (strokes-1)/2) * cell * 0.26;
-      var lean = 0.16 + j*0.1;                       // the angle of the rub
-      ctx.moveTo(gx + cell*(0.16 + j*0.1) + off, gy + cell*(0.78 - lean) + off*0.35);
-      ctx.lineTo(gx + cell*(0.74 + j*0.1) + off, gy + cell*(0.24 + lean) + off*0.35);
-    }
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-  ctx.restore();
 
   // notebook squares over the top
   ctx.strokeStyle = THEME.grid; ctx.lineWidth = 1; ctx.globalAlpha = 0.5;

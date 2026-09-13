@@ -100,57 +100,6 @@ Rain works by removing river edges from the adjacency graph in `linked()`,
 so it changes what you are allowed to claim rather than adding another
 number to the odds.
 
-## Pencil ghosts
-
-Every tile remembers who held it last and how often it has changed hands
-(`ghost` and `churn`, written only through `setOwner`). Old owners show as
-faint rub-strokes in their colour under the current fill, so by the last
-rounds the map shows where the fighting was.
-
-## The eraser wears out
-
-Every throw rounds the corners a little more. The rim starts at 9% and creeps
-toward 22%, the short ends from 2% to 8%, and the eraser on screen visibly
-loses its edges as it goes, so late flips are luckier and stranger than early
-ones. Both rare faces eat into the plus and the minus alike rather than only
-the minus.
-
-The rounded corners would otherwise let you see straight through the box, so
-the eraser has a solid core: a second six-face block scaled just inside the
-shell, square-cornered and the colour of bare rubber. It only shows where the
-outer faces have worn away, which is exactly what a chewed eraser looks
-like.
-
-## Sound
-
-Synthesised at runtime in `sfx` (WebAudio, no assets, nothing to load):
-pencil hiss while you paint, the whoosh and slap of the throw, a ting on the
-rim, the bell at the end. The `♪` chip in the header mutes it, remembered in
-`localStorage`. Browsers need a gesture before audio starts, so the context
-is created on the first pointer event.
-
-## Cards
-
-The rim deals one of four, held (max 3) and armed before any flip. A card
-only leaves your hand when it actually fires.
-
-| Card | Effect |
-| --- | --- |
-| Double | A plus (or rim) pays twice |
-| Shield | A minus costs nothing |
-| Re-flip | A minus buys one more throw |
-| Judge | +15% on the plus side for this flip |
-
-## Framing
-
-The grid is 20x32, but the canvas is sized to the country rather than the
-whole sheet: `setView()` takes the land's bounding box plus one tile of sea
-and `fit()` scales that to the board, so there is no dead paper down the
-sides and the tiles come out as large as the screen allows (22 to 25px on a
-390px-wide phone instead of 18). `makeLand()` draws two dozen candidate
-countries and keeps the one whose proportions give the biggest tiles on this
-particular screen.
-
 ## Tuning
 
 The knobs are all constants at the top of the script:
@@ -179,7 +128,6 @@ Believability constants live in `claimOdds()`.
 | turn flow | `beginTurn`, `cpuTurn`, `nextTurn`, `endGame`, `rollWeather` |
 | collapse | `capitalFalls` (a capital taken breaks the line), `routCheck` (under the threshold, surrender the rest), `biggestNeighbour` |
 | sound | `sfx`, a small WebAudio synth with `hiss` and `tone` |
-| history | `setOwner` is the only way a tile changes hands, and it records the ghost |
 | the flip | `rollFace`, `doFlip`, `toss`, `tumble`, `landed`, `resolve` |
 | rendering | `paint` (canvas), `setView` / `fit` (framing), `renderHUD`, `renderDock`, `renderOdds`, `renderHand` |
 
