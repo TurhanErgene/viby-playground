@@ -41,7 +41,7 @@ body{
 }
 #app{
   height:100dvh; min-height:420px; display:flex; flex-direction:column;
-  padding:0 14px; padding-block:10px 12px; gap:10px; max-width:560px; margin:0 auto;
+  padding:0 14px; padding-block:8px 10px; gap:8px; max-width:560px; margin:0 auto;
 }
 
 /* ---------- score rail ---------- */
@@ -61,7 +61,7 @@ body{
 .scores{display:flex; gap:6px; flex:0 0 auto}
 .score{
   flex:1; display:flex; align-items:baseline; gap:6px; min-width:0;
-  padding:7px 9px 8px; border-radius:3px; background:var(--panel);
+  padding:6px 9px 7px; border-radius:3px; background:var(--panel);
   border:1px solid var(--edge); border-left:4px solid var(--c);
   opacity:.55; transition:opacity .2s, box-shadow .2s;
 }
@@ -115,11 +115,12 @@ canvas{
 @media (prefers-reduced-motion:reduce){ .wx{transition:opacity .01s} }
 
 /* ---------- dock ---------- */
-.dock{flex:0 0 auto; display:flex; flex-direction:column; gap:9px}
+.dock{flex:0 0 auto; display:flex; flex-direction:column; gap:7px}
 .say{
   margin:0; font-family:"Patrick Hand",cursive; font-size:16.5px; line-height:1.22;
-  color:var(--ink); min-height:2.2em; display:flex; align-items:center;
+  color:var(--ink); height:2.45em; overflow:hidden; display:flex; align-items:center;
 }
+@media (max-width:372px){ .say{font-size:15px} }
 .say b{color:var(--c,var(--ink)); font-weight:400; border-bottom:2px solid var(--c,var(--ink))}
 .actions{display:flex; gap:8px}
 button.act{
@@ -142,19 +143,20 @@ button.act[disabled]{opacity:.35; pointer-events:none}
 button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); outline-offset:2px}
 
 /* ---------- odds + cards ---------- */
-.odds{display:flex; flex-direction:column; gap:6px}
-.oddsbar{display:flex; height:9px; border-radius:2px; overflow:hidden; background:var(--panel); border:1px solid var(--edge)}
+.odds{display:flex; flex-direction:column; gap:4px; min-height:38px}
+.odds.idle{visibility:hidden}
+.oddsbar{display:flex; height:7px; border-radius:2px; overflow:hidden; background:var(--panel); border:1px solid var(--edge)}
 .oddsbar span{display:block; height:100%; transition:flex-grow .18s}
 .oddsbar .sp{background:var(--face-plus)}
 .oddsbar .sr{background:var(--face-rim)}
 .oddsbar .sm{background:var(--face-minus)}
 .oddsbar.fogged span{background:repeating-linear-gradient(45deg, var(--edge) 0 3px, transparent 3px 6px)}
 .oddsread{
-  display:flex; gap:12px; font:500 12px/1 Karla,sans-serif; color:var(--ink-soft);
+  display:flex; gap:11px; min-height:11px; font:500 11.5px/1 Karla,sans-serif; color:var(--ink-soft);
   font-variant-numeric:tabular-nums;
 }
 .oddsread b{font-weight:700}
-.oddsmods{display:flex; gap:9px; font:500 11px/1 Karla,sans-serif; color:var(--ink-soft); font-variant-numeric:tabular-nums}
+.oddsmods{display:flex; gap:9px; min-height:10px; font:500 10.5px/1 Karla,sans-serif; color:var(--ink-soft); font-variant-numeric:tabular-nums}
 .oddsmods .up{color:var(--face-plus)}
 .oddsmods .dn{color:var(--face-minus)}
 .oddsread .kp b{color:var(--face-plus)}
@@ -316,7 +318,7 @@ button.act:focus-visible,.chipbtn:focus-visible{outline:2px solid var(--stamp); 
 
   <div class="dock">
     <p class="say" id="say"></p>
-    <div class="odds" id="odds" hidden>
+    <div class="odds idle" id="odds">
       <div class="oddsbar"><span class="sp" id="segP"></span><span class="sr" id="segR"></span><span class="sm" id="segM"></span></div>
       <div class="oddsread" id="oddsRead"></div>
       <div class="oddsmods" id="oddsMods"></div>
@@ -964,8 +966,8 @@ function renderOdds(){
   var host = document.getElementById('odds');
   var live = S.phase === 'draw' || S.phase === 'confirm' || S.phase === 'flip';
   var o = live && S.claim.length ? claimOdds(S.claim, S.turn, true) : null;
-  if (!o){ host.hidden = true; return; }
-  host.hidden = false;
+  if (!o){ host.classList.add('idle'); return; }   // hidden, but it keeps its height
+  host.classList.remove('idle');
   var bar = host.querySelector('.oddsbar');
   if (S.weather === 'fog'){
     bar.className = 'oddsbar fogged';
@@ -1311,8 +1313,10 @@ function landed(face, card, me, reflipped){
   if (navigator.vibrate){ try { navigator.vibrate(face === 'minus' && title !== 'blocked' ? [30,60,30] : 45); } catch(e){} }
 
   setTimeout(function(){
-    document.getElementById('stage').classList.remove('on');
+    // resolve first, so any dock change (a card joining your hand) happens
+    // while the overlay still covers the board
     resolve(face, title === 'blocked', used, me, S.target, cells);
+    setTimeout(function(){ document.getElementById('stage').classList.remove('on'); }, 80);
   }, 1150);
 }
 
@@ -1715,7 +1719,7 @@ function renderDock(){
     return;
   }
   if (S.phase === 'draw'){
-    if (!S.claim.length) say('Your turn. Drag across the rival tiles you want — start on one touching your border. Up to ' + maxClaim(S.turn) + ' tiles.', S.turn);
+    if (!S.claim.length) say('Your turn. Start on a rival tile touching your border and drag. Up to ' + maxClaim(S.turn) + ' tiles.', S.turn);
     host.appendChild(btn('Skip turn', function(){ say('You wave it off.', S.turn); nextTurn(); }, true));
     host.appendChild(pill('drag across the map', S.turn));
     return;
@@ -1745,9 +1749,9 @@ function cellAtPx(clientX, clientY){
 
 function claimLine(me){
   var n = S.claim.length;
-  return 'Claiming ' + tiles(n) + ' off ' + objOf(S.target) + '.' +
-         (S.capped ? ' That is your ' + maxClaim(me) + '-tile limit.' : '') +
-         (n > 2 ? ' A minus hands back the same ' + n + '.' : '');
+  return 'Claiming ' + tiles(n) + ' off ' + objOf(S.target) +
+         (S.capped ? ' (your limit)' : '') + '.' +
+         (n > 2 ? ' A minus costs you the same.' : '');
 }
 
 function addCell(c, me){
