@@ -111,6 +111,16 @@ only leaves your hand when it actually fires.
 | Re-flip | A minus buys one more throw |
 | Judge | +15% on the plus side for this flip |
 
+## Framing
+
+The grid is 20x32, but the canvas is sized to the country rather than the
+whole sheet: `setView()` takes the land's bounding box plus one tile of sea
+and `fit()` scales that to the board, so there is no dead paper down the
+sides and the tiles come out as large as the screen allows (22 to 25px on a
+390px-wide phone instead of 18). `makeLand()` draws two dozen candidate
+countries and keeps the one whose proportions give the biggest tiles on this
+particular screen.
+
 ## Tuning
 
 The knobs are all constants at the top of the script:
@@ -141,7 +151,7 @@ Believability constants live in `claimOdds()`.
 | sound | `sfx`, a small WebAudio synth with `hiss` and `tone` |
 | history | `setOwner` is the only way a tile changes hands, and it records the ghost |
 | the flip | `rollFace`, `doFlip`, `toss`, `tumble`, `landed`, `resolve` |
-| rendering | `paint` (canvas), `renderHUD`, `renderDock`, `renderOdds`, `renderHand` |
+| rendering | `paint` (canvas), `setView` / `fit` (framing), `renderHUD`, `renderDock`, `renderOdds`, `renderHand` |
 
 The eraser itself is lifted out as a standalone file in
 [`../snippets/eraser-flip.html`](../snippets/eraser-flip.html).
