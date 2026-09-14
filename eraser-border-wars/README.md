@@ -10,7 +10,9 @@ one file, ~1100 lines, plain ES5-style JS in one IIFE.
 
 1. **Paint a bite.** Touch a rival tile that borders you and drag across as
    many as you want. One tap is a one-tile claim. Tiles you may start on are
-   marked with a dot.
+   marked with a dot. Nothing locks in when you lift your finger — touch down
+   again to keep adding, tap a tile you've already claimed (or right-click it
+   on a computer) to drop it.
 2. **Read the odds.** The bar under the map splits into take / rim / pay, and
    moves as you paint — see *Believability* below.
 3. **Arm a card** (optional) from the hand at the bottom.
@@ -124,7 +126,7 @@ Believability constants live in `claimOdds()`.
 | Section | What lives there |
 | --- | --- |
 | map generation | `makeLand` (metaball landmass, chewed coast), `recenter`, `largestBlob`, `partition` (lockstep growth so shares start even, and its seeds become the capitals), `makeHills`, `makeRiver`, `makeFords` |
-| claims | `grabNear` (grow a contiguous blob), `addCell` / `strokeStart` / `strokeMove` (painting), `claimOdds` |
+| claims | `grabNear` (grow a contiguous blob), `addCell` / `removeCell` / `pruneClaim` and `strokeStart` / `strokeMove` (painting and erasing), `claimOdds` |
 | turn flow | `beginTurn`, `cpuTurn`, `nextTurn`, `endGame`, `rollWeather` |
 | collapse | `capitalFalls` (a capital taken breaks the line), `routCheck` (under the threshold, surrender the rest), `biggestNeighbour` |
 | sound | `sfx`, a small WebAudio synth with `hiss` and `tone` |
